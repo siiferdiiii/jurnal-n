@@ -74,10 +74,7 @@ export default function Auth() {
 
       <div style={{
         width: '100%',
-        maxWidth: '920px',
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '0',
+        maxWidth: '480px',
         background: 'var(--panel-bg)',
         border: '1px solid var(--panel-border)',
         borderRadius: '24px',
@@ -88,65 +85,25 @@ export default function Auth() {
         zIndex: 1,
       }}>
 
-        {/* ── LEFT PANEL: Branding ── */}
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.08) 50%, rgba(6,182,212,0.06) 100%)',
-          borderRight: '1px solid rgba(255,255,255,0.05)',
-          padding: '60px 48px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          gap: '32px',
-        }}>
+        {/* ── FORM PANEL ── */}
+        <div className="auth-card-content" style={{ padding: '60px 48px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
             <div style={{
-              width: '52px', height: '52px', borderRadius: '14px',
+              width: '40px', height: '40px', borderRadius: '10px',
               background: 'linear-gradient(135deg, var(--accent), var(--accent-secondary))',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 24px rgba(99,102,241,0.4)',
+              boxShadow: '0 0 20px rgba(99,102,241,0.3)',
             }}>
-              <BrainCircuit size={28} color="white" />
+              <BrainCircuit size={22} color="white" />
             </div>
             <div>
-              <div style={{ fontSize: '24px', fontWeight: '800', background: 'linear-gradient(135deg,#fff,#a5b4fc)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
+              <div style={{ fontSize: '20px', fontWeight: '800', background: 'linear-gradient(135deg,#fff,#a5b4fc)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
                 Jurnal-N
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Trading Journal</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>Trading Journal</div>
             </div>
           </div>
-
-          {/* Tagline */}
-          <div>
-            <h2 style={{ fontSize: '28px', fontWeight: '800', color: '#fff', lineHeight: '1.3', marginBottom: '12px' }}>
-              Catat. Analisis.<br />
-              <span style={{ background: 'linear-gradient(135deg,#a5b4fc,#67e8f9)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
-                Berkembang.
-              </span>
-            </h2>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.7' }}>
-              Platform jurnal trading pribadi dengan analitik psikologi mendalam. Setiap trade yang kamu catat adalah satu langkah menuju konsistensi.
-            </p>
-          </div>
-
-          {/* Feature chips */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {[
-              { emoji: '📈', text: 'Equity curve & statistik lanjutan' },
-              { emoji: '🧠', text: 'Analisis faktor psikologi trading' },
-              { emoji: '📊', text: 'Performa per pair & setup type' },
-              { emoji: '🔒', text: 'Data privat, terenkripsi di cloud' },
-            ].map(({ emoji, text }) => (
-              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                <span style={{ fontSize: '16px' }}>{emoji}</span>
-                {text}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── RIGHT PANEL: Form ── */}
-        <div style={{ padding: '60px 48px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           {/* Header */}
           <div style={{ marginBottom: '36px' }}>
             <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#fff', marginBottom: '8px' }}>
@@ -276,14 +233,11 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Responsive: stack on mobile */}
+      {/* Responsive adjustments */}
       <style>{`
-        @media (max-width: 680px) {
-          div[style*="gridTemplateColumns: '1fr 1fr'"] {
-            grid-template-columns: 1fr !important;
-          }
-          div[style*="borderRight: '1px solid"] {
-            display: none !important;
+        @media (max-width: 480px) {
+          .auth-card-content {
+            padding: 40px 24px !important;
           }
         }
         .auth-field { display: flex; flex-direction: column; gap: 6px; }
