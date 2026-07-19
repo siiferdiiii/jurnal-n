@@ -20,6 +20,29 @@ export default function Gallery({ dbTrigger, userId }) {
   // Lightbox Zoom State
   const [activeLightbox, setActiveLightbox] = useState(null);
 
+  // Bubble text state & timer
+  const [showBubble, setShowBubble] = useState(false);
+
+  useEffect(() => {
+    // Show bubble after 3.5 seconds
+    const initialTimer = setTimeout(() => {
+      setShowBubble(true);
+      // Hide bubble after 4.5 seconds
+      setTimeout(() => setShowBubble(false), 4500);
+    }, 3500);
+
+    // Repeat every 20 seconds, showing for 4.5 seconds
+    const interval = setInterval(() => {
+      setShowBubble(true);
+      setTimeout(() => setShowBubble(false), 4500);
+    }, 20000);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, []);
+
   // Filters State
   const [filterPair, setFilterPair] = useState('');
   const [filterMethod, setFilterMethod] = useState('');
@@ -364,6 +387,76 @@ export default function Gallery({ dbTrigger, userId }) {
           onClose={() => setActiveLightbox(null)} 
         />
       )}
+
+      {/* Floating Coffee / Support Button */}
+      <div style={{ position: 'fixed', bottom: '28px', right: '28px', zIndex: 1000 }}>
+        {/* Speech Bubble */}
+        <div style={{
+          position: 'absolute',
+          bottom: '72px',
+          right: '0',
+          background: 'rgba(18, 20, 29, 0.95)',
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          borderRadius: '12px',
+          padding: '10px 16px',
+          color: '#fbbf24',
+          fontSize: '13px',
+          fontWeight: '600',
+          whiteSpace: 'nowrap',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 16px rgba(245, 158, 11, 0.1)',
+          opacity: showBubble ? 1 : 0,
+          transform: showBubble ? 'translateY(0) scale(1)' : 'translateY(12px) scale(0.9)',
+          transformOrigin: 'bottom right',
+          pointerEvents: showBubble ? 'auto' : 'none',
+          transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+        }}>
+          Mau traktir kamu Kopi? ☕
+          {/* Pointer */}
+          <div style={{
+            position: 'absolute',
+            bottom: '-6px',
+            right: '22px',
+            width: '10px',
+            height: '10px',
+            background: 'rgba(18, 20, 29, 0.95)',
+            borderRight: '1px solid rgba(245, 158, 11, 0.3)',
+            borderBottom: '1px solid rgba(245, 158, 11, 0.3)',
+            transform: 'rotate(45deg)',
+          }} />
+        </div>
+
+        {/* Button */}
+        <a
+          href="https://sociabuzz.com/figmaboy/tribe"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            boxShadow: '0 0 20px rgba(245, 158, 11, 0.4), 0 4px 12px rgba(0,0,0,0.5)',
+            color: '#fff',
+            fontSize: '24px',
+            textDecoration: 'none',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            cursor: 'pointer',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'scale(1.1) rotate(5deg)';
+            e.currentTarget.style.boxShadow = '0 0 28px rgba(245, 158, 11, 0.6), 0 6px 16px rgba(0,0,0,0.6)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+            e.currentTarget.style.boxShadow = '0 0 20px rgba(245, 158, 11, 0.4), 0 4px 12px rgba(0,0,0,0.5)';
+          }}
+        >
+          ☕
+        </a>
+      </div>
     </>
   );
 }

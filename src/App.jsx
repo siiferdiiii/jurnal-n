@@ -95,46 +95,6 @@ function App() {
           ))}
         </nav>
         <div className="nav-footer">
-          {/* Traktir Kopi / Syukuran Profit */}
-          <a
-            href="https://sociabuzz.com/figmaboy/tribe"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              padding: '10px 12px',
-              marginBottom: '12px',
-              background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(249, 115, 22, 0.08))',
-              border: '1px solid rgba(245, 158, 11, 0.25)',
-              borderRadius: '10px',
-              color: '#f59e0b',
-              fontSize: '12px',
-              fontWeight: '700',
-              textDecoration: 'none',
-              transition: 'all 0.2s ease',
-              textAlign: 'center',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(249, 115, 22, 0.12))';
-              e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.45)';
-              e.currentTarget.style.color = '#fbbf24';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.15)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(249, 115, 22, 0.08))';
-              e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.25)';
-              e.currentTarget.style.color = '#f59e0b';
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-            }}
-          >
-            <span>☕</span>
-            <span style={{ letterSpacing: '0.3px' }}>Syukuran Profit</span>
-          </a>
-
           {/* User info */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px',
             padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px',
