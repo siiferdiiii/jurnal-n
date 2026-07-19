@@ -50,13 +50,6 @@ export default function Gallery({ dbTrigger, userId }) {
   return (
     <>
       <div className="animate-fade-in">
-      <div className="page-header">
-        <div className="page-title">
-          <h1>Galeri Chart</h1>
-          <p>Koleksi visual setup premarket dan dokumentasi hasil transaksi untuk evaluasi visual.</p>
-        </div>
-      </div>
-
       {/* Filter Bar */}
       <div className="glass-card mb-30 flex-between" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '16px 24px' }}>
         <div className="flex-align-center gap-10" style={{ flex: 1, minWidth: '240px' }}>

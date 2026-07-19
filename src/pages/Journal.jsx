@@ -261,11 +261,7 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
   return (
     <>
       <div className="animate-fade-in">
-      <div className="page-header">
-        <div className="page-title">
-          <h1>Jurnal Transaksi</h1>
-          <p>Catat analisis pra-market, evaluasi SOP, kondisi mental, dan simpan riwayat trade Anda.</p>
-        </div>
+      <div className="page-header" style={{ justifyContent: 'flex-end' }}>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button 
             onClick={() => setActiveSubTab('list')} 

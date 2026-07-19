@@ -426,13 +426,6 @@ export default function Dashboard({ dbTrigger, userId }) {
 
   return (
     <div className="animate-fade-in">
-      <div className="page-header">
-        <div className="page-title">
-          <h1>Dashboard Analisis</h1>
-          <p>Tinjauan menyeluruh performa trading dan evaluasi psikologi Anda.</p>
-        </div>
-      </div>
-
       {/* ── KPI CARDS ── */}
       <div className="dashboard-grid">
         {[

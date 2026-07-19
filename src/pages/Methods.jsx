@@ -207,11 +207,7 @@ export default function Methods({ dbTrigger, onDataChange, userId }) {
 
   return (
     <div className="animate-fade-in">
-      <div className="page-header">
-        <div className="page-title">
-          <h1>Manajemen Metode & SOP</h1>
-          <p>Kelola SOP, key levels, trigger entry, dan <strong>aturan trading</strong> untuk setiap strategi Anda.</p>
-        </div>
+      <div className="page-header" style={{ justifyContent: 'flex-end' }}>
         <button onClick={() => setShowAddForm(!showAddForm)} className="btn btn-primary">
           <Plus size={16} />
           {showAddForm ? 'Tutup Form' : 'Tambah Metode Baru'}
