@@ -389,7 +389,7 @@ export default function Gallery({ dbTrigger, userId }) {
       )}
 
       {/* Floating Coffee / Support Button */}
-      <div style={{ position: 'fixed', bottom: '28px', right: '28px', zIndex: 1000 }}>
+      <div className="floating-coffee-container">
         {/* Speech Bubble */}
         <div style={{
           position: 'absolute',
@@ -410,7 +410,7 @@ export default function Gallery({ dbTrigger, userId }) {
           pointerEvents: showBubble ? 'auto' : 'none',
           transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
         }}>
-          Mau traktir kamu Kopi? ☕
+          Mau traktir kami kopi? ☕
           {/* Pointer */}
           <div style={{
             position: 'absolute',
@@ -430,33 +430,47 @@ export default function Gallery({ dbTrigger, userId }) {
           href="https://sociabuzz.com/figmaboy/tribe"
           target="_blank"
           rel="noopener noreferrer"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-            boxShadow: '0 0 20px rgba(245, 158, 11, 0.4), 0 4px 12px rgba(0,0,0,0.5)',
-            color: '#fff',
-            fontSize: '24px',
-            textDecoration: 'none',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            cursor: 'pointer',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.transform = 'scale(1.1) rotate(5deg)';
-            e.currentTarget.style.boxShadow = '0 0 28px rgba(245, 158, 11, 0.6), 0 6px 16px rgba(0,0,0,0.6)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
-            e.currentTarget.style.boxShadow = '0 0 20px rgba(245, 158, 11, 0.4), 0 4px 12px rgba(0,0,0,0.5)';
-          }}
+          className="floating-coffee-btn"
         >
           ☕
         </a>
       </div>
+
+      <style>{`
+        .floating-coffee-container {
+          position: fixed;
+          bottom: 28px;
+          right: 28px;
+          z-index: 1000;
+        }
+        @media (max-width: 768px) {
+          .floating-coffee-container {
+            bottom: 92px;
+            right: 16px;
+          }
+        }
+        .floating-coffee-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+          box-shadow: 0 0 20px rgba(245, 158, 11, 0.4), 0 4px 12px rgba(0,0,0,0.5);
+          color: #fff;
+          font-size: 24px;
+          text-decoration: none;
+          opacity: 0.5;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+        }
+        .floating-coffee-btn:hover {
+          opacity: 1;
+          transform: scale(1.1) rotate(5deg);
+          box-shadow: 0 0 28px rgba(245, 158, 11, 0.6), 0 6px 16px rgba(0,0,0,0.6);
+        }
+      `}</style>
     </>
   );
 }
