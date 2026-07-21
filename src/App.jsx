@@ -7,9 +7,22 @@ import {
   BrainCircuit,
   LogOut,
   User,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 import { onAuthStateChange, signOut } from './lib/auth';
+
+/** Helper to mask user email for privacy */
+const maskEmail = (email) => {
+  if (!email) return '';
+  const [localPart, domain] = email.split('@');
+  if (!domain) return email;
+  if (localPart.length <= 2) {
+    return `${localPart[0]}***@${domain}`;
+  }
+  return `${localPart[0]}***${localPart[localPart.length - 1]}@${domain}`;
+};
 
 import Auth      from './pages/Auth';
 import Dashboard from './pages/Dashboard';
@@ -21,6 +34,15 @@ function App() {
   const [session,    setSession]    = useState(undefined); // undefined = loading
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [dbTrigger,  setDbTrigger]  = useState(0);
+  const [showEmail,  setShowEmail]  = useState(() => localStorage.getItem('showEmail') === 'true');
+
+  const toggleShowEmail = () => {
+    setShowEmail(prev => {
+      const next = !prev;
+      localStorage.setItem('showEmail', String(next));
+      return next;
+    });
+  };
 
   // Subscribe to auth state changes
   useEffect(() => {
@@ -109,9 +131,32 @@ function App() {
                 overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {displayName || 'Trader'}
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap',
-                overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {userEmail}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', whiteSpace: 'nowrap',
+                  overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}
+                  title={showEmail ? userEmail : undefined}
+                >
+                  {showEmail ? userEmail : maskEmail(userEmail)}
+                </div>
+                <button
+                  onClick={toggleShowEmail}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '2px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: 'var(--text-muted)',
+                    opacity: 0.6,
+                    transition: 'opacity 0.2s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                  onMouseLeave={e => e.currentTarget.style.opacity = 0.6}
+                  title={showEmail ? "Sembunyikan Email" : "Tampilkan Email"}
+                >
+                  {showEmail ? <EyeOff size={12} /> : <Eye size={12} />}
+                </button>
               </div>
             </div>
           </div>
