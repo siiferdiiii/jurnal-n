@@ -16,7 +16,8 @@ import {
   Flame,
   Snowflake,
   Percent,
-  ArrowDownRight
+  ArrowDownRight,
+  Sparkles
 } from 'lucide-react';
 import { getJurnal } from '../lib/api';
 
@@ -354,6 +355,239 @@ function AdvancedStats({ trades }) {
   );
 }
 
+// Psychology detailed analytics per phase
+function PsychologyAnalyticsSection({ trades }) {
+  const [activeTab, setActiveTab] = useState('sebelum'); // 'sebelum' | 'saat' | 'setelah' | 'kesalahan'
+
+  const totalTrades = trades.length;
+
+  const stats = useMemo(() => {
+    const sebelum = {
+      'Tenang': { name: 'Tenang / Objektif', emoji: '🧠', color: '#10b981', count: 0, wins: 0, pnl: 0, rr: 0 },
+      'FOMO': { name: 'FOMO (Takut Ketinggalan)', emoji: '⚡', color: '#f97316', count: 0, wins: 0, pnl: 0, rr: 0 },
+      'Gugup': { name: 'Gugup / Ragu', emoji: '😰', color: '#eab308', count: 0, wins: 0, pnl: 0, rr: 0 },
+      'Balas Dendam': { name: 'Balas Dendam (Revenge)', emoji: '🔥', color: '#ef4444', count: 0, wins: 0, pnl: 0, rr: 0 },
+    };
+
+    const saat = {
+      'Tenang': { name: 'Tenang / Santai', emoji: '😌', color: '#10b981', count: 0, wins: 0, pnl: 0, rr: 0 },
+      'Takut': { name: 'Takut / Khawatir', emoji: '😨', color: '#eab308', count: 0, wins: 0, pnl: 0, rr: 0 },
+      'Serakah': { name: 'Serakah (Greedy)', emoji: '🤑', color: '#ef4444', count: 0, wins: 0, pnl: 0, rr: 0 },
+      'Geser SL': { name: 'Ingin Geser SL/TP', emoji: '📐', color: '#ec4899', count: 0, wins: 0, pnl: 0, rr: 0 },
+    };
+
+    const setelah = {
+      'Puas': { name: 'Puas / Sesuai Plan', emoji: '🎯', color: '#10b981', count: 0, wins: 0, pnl: 0, rr: 0 },
+      'Kecewa': { name: 'Kecewa / Menyesal', emoji: '😞', color: '#f97316', count: 0, wins: 0, pnl: 0, rr: 0 },
+      'Marah': { name: 'Marah / Frustrasi', emoji: '😡', color: '#ef4444', count: 0, wins: 0, pnl: 0, rr: 0 },
+      'Netral': { name: 'Netral / Biasa Saja', emoji: '😐', color: '#6366f1', count: 0, wins: 0, pnl: 0, rr: 0 },
+    };
+
+    const kesalahan = {
+      fomo: { name: 'FOMO / Mengejar Harga', emoji: '⚠️', color: '#f97316', count: 0, wins: 0, pnl: 0, rr: 0 },
+      serakah: { name: 'Serakah / Over-lotting', emoji: '💸', color: '#ef4444', count: 0, wins: 0, pnl: 0, rr: 0 },
+      takut: { name: 'Takut Loss / Cut Early', emoji: '✂️', color: '#eab308', count: 0, wins: 0, pnl: 0, rr: 0 },
+      geser_sl: { name: 'Menggeser Stop Loss', emoji: '📏', color: '#ec4899', count: 0, wins: 0, pnl: 0, rr: 0 },
+      overtrade: { name: 'Overtrading / Revenge', emoji: '🌀', color: '#8b5cf6', count: 0, wins: 0, pnl: 0, rr: 0 },
+    };
+
+    trades.forEach(t => {
+      const isWin = ['win', 'partial_tp', 'sl+'].includes(t.hasilTrade);
+      const pnl = t.profitNominal || 0;
+      const rr = t.rrDiperoleh || 0;
+
+      if (t.psikologiSebelum && sebelum[t.psikologiSebelum]) {
+        sebelum[t.psikologiSebelum].count++;
+        if (isWin) sebelum[t.psikologiSebelum].wins++;
+        sebelum[t.psikologiSebelum].pnl += pnl;
+        sebelum[t.psikologiSebelum].rr += rr;
+      }
+
+      if (t.psikologiSaatOpen && saat[t.psikologiSaatOpen]) {
+        saat[t.psikologiSaatOpen].count++;
+        if (isWin) saat[t.psikologiSaatOpen].wins++;
+        saat[t.psikologiSaatOpen].pnl += pnl;
+        saat[t.psikologiSaatOpen].rr += rr;
+      }
+
+      if (t.psikologiSetelah && setelah[t.psikologiSetelah]) {
+        setelah[t.psikologiSetelah].count++;
+        if (isWin) setelah[t.psikologiSetelah].wins++;
+        setelah[t.psikologiSetelah].pnl += pnl;
+        setelah[t.psikologiSetelah].rr += rr;
+      }
+
+      (t.faktorKesalahan || []).forEach(k => {
+        if (kesalahan[k]) {
+          kesalahan[k].count++;
+          if (isWin) kesalahan[k].wins++;
+          kesalahan[k].pnl += pnl;
+          kesalahan[k].rr += rr;
+        }
+      });
+    });
+
+    return { sebelum, saat, setelah, kesalahan };
+  }, [trades]);
+
+  const activeCategoryData = stats[activeTab] || stats.sebelum;
+
+  const insight = useMemo(() => {
+    if (totalTrades === 0) return null;
+
+    let bestSebelum = null;
+    Object.values(stats.sebelum).forEach(item => {
+      if (item.count > 0) {
+        if (!bestSebelum || (item.wins / item.count) > (bestSebelum.wins / bestSebelum.count)) {
+          bestSebelum = item;
+        }
+      }
+    });
+
+    let worstState = null;
+    [...Object.values(stats.sebelum), ...Object.values(stats.saat)].forEach(item => {
+      if (item.count > 0 && item.emoji !== '🧠' && item.emoji !== '😌') {
+        if (!worstState || item.pnl < worstState.pnl) {
+          worstState = item;
+        }
+      }
+    });
+
+    return { bestSebelum, worstState };
+  }, [stats, totalTrades]);
+
+  const tabs = [
+    { key: 'sebelum', label: 'Sebelum Open' },
+    { key: 'saat', label: 'Saat Jalan' },
+    { key: 'setelah', label: 'Setelah Close' },
+    { key: 'kesalahan', label: 'Faktor Kesalahan' },
+  ];
+
+  if (totalTrades === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)', fontSize: '13px' }}>
+        <AlertCircle size={28} style={{ marginBottom: '10px', opacity: 0.4 }} />
+        <p>Belum ada faktor emosi yang direkam.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* Sub-tab navigation */}
+      <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              flex: 1,
+              padding: '6px 4px',
+              fontSize: '11px',
+              fontWeight: activeTab === tab.key ? '700' : '500',
+              color: activeTab === tab.key ? '#fff' : 'var(--text-muted)',
+              background: activeTab === tab.key ? 'var(--accent)' : 'transparent',
+              borderRadius: 'var(--radius-xs)',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Item list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {Object.entries(activeCategoryData).map(([key, item]) => {
+          const wr = item.count > 0 ? ((item.wins / item.count) * 100).toFixed(0) : 0;
+          const pct = totalTrades > 0 ? ((item.count / totalTrades) * 100).toFixed(0) : 0;
+          const isPosPnL = item.pnl >= 0;
+
+          return (
+            <div key={key} style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '8px 12px'
+            }}>
+              <div className="flex-between" style={{ marginBottom: '5px' }}>
+                <div className="flex-align-center gap-10">
+                  <span style={{ fontSize: '14px' }}>{item.emoji}</span>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: item.count > 0 ? '#fff' : 'var(--text-muted)' }}>
+                    {item.name}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '11px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>{item.count}x ({pct}%)</span>
+                  {item.count > 0 && (
+                    <>
+                      <span style={{
+                        color: parseFloat(wr) >= 50 ? 'var(--color-win)' : 'var(--color-lose)',
+                        fontWeight: '700',
+                        fontFamily: 'var(--font-mono)'
+                      }}>
+                        WR {wr}%
+                      </span>
+                      <span style={{
+                        color: isPosPnL ? 'var(--color-win)' : 'var(--color-lose)',
+                        fontWeight: '700',
+                        fontFamily: 'var(--font-mono)'
+                      }}>
+                        {isPosPnL ? '+' : ''}${item.pnl}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{
+                  width: item.count > 0 ? `${wr}%` : '0%',
+                  height: '100%',
+                  background: parseFloat(wr) >= 50 ? 'var(--color-win)' : 'var(--color-lose)',
+                  borderRadius: '999px',
+                  transition: 'width 0.5s ease'
+                }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Psychological Insights Box */}
+      {insight && (insight.bestSebelum || insight.worstState) && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(16,185,129,0.05) 100%)',
+          border: '1px solid rgba(99,102,241,0.2)',
+          borderRadius: 'var(--radius-sm)',
+          padding: '10px 12px',
+          fontSize: '11px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700', color: 'var(--accent)' }}>
+            <Sparkles size={13} /> Insight Psikologi Anda
+          </div>
+          {insight.bestSebelum && (
+            <div style={{ color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+              💡 Performa terbaik terjadi saat <strong style={{ color: '#fff' }}>{insight.bestSebelum.name}</strong> ({insight.bestSebelum.emoji}) dengan Win Rate <strong style={{ color: 'var(--color-win)' }}>{((insight.bestSebelum.wins / insight.bestSebelum.count) * 100).toFixed(0)}%</strong> dan PnL <strong style={{ color: insight.bestSebelum.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)' }}>{insight.bestSebelum.pnl >= 0 ? '+' : ''}${insight.bestSebelum.pnl}</strong>.
+            </div>
+          )}
+          {insight.worstState && insight.worstState.pnl < 0 && (
+            <div style={{ color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+              ⚠️ Perhatian: Kondisi <strong style={{ color: '#fff' }}>{insight.worstState.name}</strong> ({insight.worstState.emoji}) telah menyebabkan kerugian total <strong style={{ color: 'var(--color-lose)' }}>${insight.worstState.pnl}</strong>.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─────────────────────────────────────────────
    MAIN DASHBOARD
 ───────────────────────────────────────────── */
@@ -374,27 +608,6 @@ export default function Dashboard({ dbTrigger, userId }) {
   const totalNetPnL = trades.reduce((acc, cur) => acc + (cur.profitNominal || 0), 0).toFixed(2);
   const cumulativeRR = trades.reduce((acc, cur) => acc + (cur.rrDiperoleh || 0), 0).toFixed(2);
   const avgRR = totalTrades > 0 ? (parseFloat(cumulativeRR) / totalTrades).toFixed(2) : '0.00';
-
-  // Psychology stats
-  const psychologyStats = useMemo(() => {
-    const errorTypes = {
-      fomo: { name: 'FOMO', color: '#f97316', count: 0, pnl: 0, wins: 0 },
-      serakah: { name: 'Serakah', color: '#ef4444', count: 0, pnl: 0, wins: 0 },
-      takut: { name: 'Takut (Cut Early)', color: '#eab308', count: 0, pnl: 0, wins: 0 },
-      geser_sl: { name: 'Geser SL', color: '#ec4899', count: 0, pnl: 0, wins: 0 },
-      overtrade: { name: 'Overtrade', color: '#8b5cf6', count: 0, pnl: 0, wins: 0 },
-    };
-    trades.forEach(t => {
-      (t.faktorKesalahan || []).forEach(err => {
-        if (errorTypes[err]) {
-          errorTypes[err].count++;
-          errorTypes[err].pnl += t.profitNominal || 0;
-          if (['win', 'partial_tp', 'sl+'].includes(t.hasilTrade)) errorTypes[err].wins++;
-        }
-      });
-    });
-    return errorTypes;
-  }, [trades]);
 
   // Calendar
   const year = currentDate.getFullYear();
@@ -537,45 +750,14 @@ export default function Dashboard({ dbTrigger, userId }) {
           </div>
         </div>
 
-        {/* Analisis Psikologi — updated visual with bars */}
+        {/* Analisis Psikologi — 3 Tahap & Faktor Kesalahan */}
         <div className="glass-card">
           <SectionHeader
             icon={<Brain size={18} style={{ color: 'var(--accent)' }} />}
-            title="Dampak Faktor Psikologis"
-            subtitle="Total USD yang terdampak setiap faktor emosi negatif"
+            title="Analisis Faktor Psikologis"
+            subtitle="Statistik & dampak emosi pada setiap tahap trading"
           />
-          {Object.values(psychologyStats).every(s => s.count === 0) ? (
-            <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)', fontSize: '13px' }}>
-              <AlertCircle size={28} style={{ marginBottom: '10px', opacity: 0.4 }} />
-              <p>Belum ada faktor emosi yang direkam.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {Object.entries(psychologyStats).map(([key, s]) => {
-                const pct = totalTrades > 0 ? (s.count / totalTrades) * 100 : 0;
-                return (
-                  <div key={key}>
-                    <div className="flex-between" style={{ marginBottom: '5px' }}>
-                      <div className="flex-align-center gap-10">
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: '13px', fontWeight: '600', color: s.count > 0 ? '#fff' : 'var(--text-muted)' }}>{s.name}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px', fontSize: '11px' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{s.count}x</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '700', color: s.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)' }}>
-                          {s.pnl >= 0 ? '+' : ''}${s.pnl}
-                        </span>
-                      </div>
-                    </div>
-                    <div style={{ height: '5px', background: 'rgba(255,255,255,0.05)', borderRadius: '999px', overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: s.color, borderRadius: '999px',
-                        boxShadow: `0 0 8px ${s.color}60`, transition: 'width 0.6s ease' }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <PsychologyAnalyticsSection trades={trades} />
         </div>
       </div>
 
