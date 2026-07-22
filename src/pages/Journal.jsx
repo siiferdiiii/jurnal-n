@@ -11,7 +11,8 @@ import {
   AlertCircle,
   TrendingUp,
   Brain,
-  X
+  X,
+  Pencil
 } from 'lucide-react';
 import { getJurnal, getMetode, saveJurnal, deleteJurnal } from '../lib/api';
 import Lightbox from '../components/Lightbox';
@@ -59,6 +60,9 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
   const [methods, setMethods] = useState([]);
   const [activeSubTab, setActiveSubTab] = useState('list'); // 'list' | 'add'
   
+  // Edit State
+  const [editingTradeId, setEditingTradeId] = useState(null);
+
   // States for Filtering
   const [filterPair, setFilterPair] = useState('');
   const [filterMethod, setFilterMethod] = useState('');
@@ -104,9 +108,62 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
     });
   }, [dbTrigger]);
 
-  // Set default form values when method changes
+  const resetForm = () => {
+    setEditingTradeId(null);
+    setTanggal(new Date().toISOString().split('T')[0]);
+    setPair('');
+    setArah('BUY');
+    setJenisTrade('continuation');
+    setMetodeId('');
+    setChecklistTerpenuhi([]);
+    setKeyLevelDigunakan('');
+    setTriggerEntry('');
+    setRiskRewardRatio(2);
+    setHasilTrade('win');
+    setProfitNominal('');
+    setRrDiperoleh('');
+    setPsikologiSebelum('Tenang');
+    setPsikologiSaatOpen('Tenang');
+    setPsikologiSetelah('Tenang');
+    setFaktorKesalahan([]);
+    setCatatanHariIni('');
+    setPremarketFile(null);
+    setResultFile(null);
+    setPremarketPreview('');
+    setResultPreview('');
+  };
+
+  const handleEditTrade = (trade) => {
+    setEditingTradeId(trade.id);
+    setTanggal(trade.tanggal || new Date().toISOString().split('T')[0]);
+    setPair(trade.pair || '');
+    setArah(trade.arah || 'BUY');
+    setJenisTrade(trade.jenisTrade || 'continuation');
+    setMetodeId(trade.metodeId || '');
+    setChecklistTerpenuhi(trade.checklistTerpenuhi || []);
+    setKeyLevelDigunakan(trade.keyLevelDigunakan || '');
+    setTriggerEntry(trade.triggerEntry || '');
+    setRiskRewardRatio(trade.riskRewardRatio || 2);
+    setHasilTrade(trade.hasilTrade || 'win');
+    setProfitNominal(trade.profitNominal != null ? trade.profitNominal : '');
+    setRrDiperoleh(trade.rrDiperoleh != null ? trade.rrDiperoleh : '');
+    setPsikologiSebelum(trade.psikologiSebelum || 'Tenang');
+    setPsikologiSaatOpen(trade.psikologiSaatOpen || 'Tenang');
+    setPsikologiSetelah(trade.psikologiSetelah || 'Tenang');
+    setFaktorKesalahan(trade.faktorKesalahan || []);
+    setCatatanHariIni(trade.catatanHariIni || '');
+    setPremarketPreview(trade.fotoPremarket || '');
+    setResultPreview(trade.fotoResult || '');
+    setPremarketFile(null);
+    setResultFile(null);
+
+    if (selectedTrade) setSelectedTrade(null);
+    setActiveSubTab('add');
+  };
+
+  // Set default form values when method changes (only when creating new trade)
   useEffect(() => {
-    if (metodeId) {
+    if (metodeId && !editingTradeId) {
       const selectedM = methods.find(m => m.id === metodeId);
       if (selectedM) {
         setChecklistTerpenuhi([]);
@@ -114,25 +171,27 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
         setTriggerEntry(selectedM.triggers?.[0] || '');
       }
     }
-  }, [metodeId, methods]);
+  }, [metodeId, methods, editingTradeId]);
 
-  // Set default RR & Profit when hasilTrade changes
+  // Set default RR & Profit when hasilTrade changes (only when creating new trade)
   useEffect(() => {
-    if (hasilTrade === 'win') {
-      setRrDiperoleh(riskRewardRatio);
-    } else if (hasilTrade === 'lose') {
-      setRrDiperoleh(-1);
-    } else if (hasilTrade === 'break_even') {
-      setRrDiperoleh(0);
-      setProfitNominal(0);
-    } else if (hasilTrade === 'sl') {
-      setRrDiperoleh(-1);
-    } else if (hasilTrade === 'sl+') {
-      setRrDiperoleh(0.5);
-    } else if (hasilTrade === 'partial_tp') {
-      setRrDiperoleh(Math.max(0.5, (riskRewardRatio / 2)));
+    if (!editingTradeId) {
+      if (hasilTrade === 'win') {
+        setRrDiperoleh(riskRewardRatio);
+      } else if (hasilTrade === 'lose') {
+        setRrDiperoleh(-1);
+      } else if (hasilTrade === 'break_even') {
+        setRrDiperoleh(0);
+        setProfitNominal(0);
+      } else if (hasilTrade === 'sl') {
+        setRrDiperoleh(-1);
+      } else if (hasilTrade === 'sl+') {
+        setRrDiperoleh(0.5);
+      } else if (hasilTrade === 'partial_tp') {
+        setRrDiperoleh(Math.max(0.5, (riskRewardRatio / 2)));
+      }
     }
-  }, [hasilTrade, riskRewardRatio]);
+  }, [hasilTrade, riskRewardRatio, editingTradeId]);
 
   const handleSopCheck = (sopItem) => {
     if (checklistTerpenuhi.includes(sopItem)) {
@@ -183,7 +242,7 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
     setIsSubmitting(true);
 
     const tradeEntry = {
-
+      ...(editingTradeId ? { id: editingTradeId } : {}),
       tanggal,
       pair: pair.toUpperCase().trim(),
       arah,
@@ -209,17 +268,7 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
       await saveJurnal(tradeEntry, userId);
       onDataChange();
       // Reset Form & Switch View
-      setPair('');
-      setMetodeId('');
-      setChecklistTerpenuhi([]);
-      setFaktorKesalahan([]);
-      setProfitNominal('');
-      setRrDiperoleh('');
-      setCatatanHariIni('');
-      setPremarketFile(null);
-      setResultFile(null);
-      setPremarketPreview('');
-      setResultPreview('');
+      resetForm();
       setActiveSubTab('list');
     } catch (err) {
       console.error('Gagal menyimpan trade:', err);
@@ -264,13 +313,13 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
       <div className="page-header" style={{ justifyContent: 'flex-end' }}>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button 
-            onClick={() => setActiveSubTab('list')} 
+            onClick={() => { resetForm(); setActiveSubTab('list'); }} 
             className={`btn ${activeSubTab === 'list' ? 'btn-primary' : 'btn-secondary'}`}
           >
             Riwayat Trade
           </button>
           <button 
-            onClick={() => setActiveSubTab('add')} 
+            onClick={() => { resetForm(); setActiveSubTab('add'); }} 
             className={`btn ${activeSubTab === 'add' ? 'btn-primary' : 'btn-secondary'}`}
           >
             <Plus size={16} />
@@ -282,8 +331,8 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
       {activeSubTab === 'add' ? (
         /* FORM CATAT TRADE BARU */
         <form onSubmit={handleSaveTrade} className="glass-card" style={{ maxWidth: '1000px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '18px', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
-            Catat Evaluasi Trade
+          <h2 style={{ fontSize: '18px', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {editingTradeId ? <><Pencil size={18} style={{ color: 'var(--accent)' }} /> Edit Evaluasi Trade</> : 'Catat Evaluasi Trade'}
           </h2>
           
           <div className="form-row">
@@ -512,9 +561,9 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
           </div>
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '20px' }}>
-            <button type="button" onClick={() => setActiveSubTab('list')} className="btn btn-secondary">Batal</button>
+            <button type="button" onClick={() => { resetForm(); setActiveSubTab('list'); }} className="btn btn-secondary">Batal</button>
             <button type="submit" disabled={isSubmitting} className="btn btn-primary">
-              {isSubmitting ? 'Menyimpan...' : 'Simpan Jurnal Trade'}
+              {isSubmitting ? 'Menyimpan...' : editingTradeId ? 'Simpan Perubahan' : 'Simpan Jurnal Trade'}
             </button>
           </div>
         </form>
@@ -626,13 +675,23 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
                             onClick={() => setSelectedTrade(trade)} 
                             className="btn btn-secondary" 
                             style={{ padding: '6px 10px', fontSize: '12px' }}
+                            title="Lihat Detail"
                           >
                             <Eye size={12} /> Detail
+                          </button>
+                          <button 
+                            onClick={() => handleEditTrade(trade)} 
+                            className="btn btn-secondary" 
+                            style={{ padding: '6px 10px', fontSize: '12px', color: 'var(--accent)' }}
+                            title="Edit Catatan Trade"
+                          >
+                            <Pencil size={12} /> Edit
                           </button>
                           <button 
                             onClick={() => handleDeleteTrade(trade.id)} 
                             className="btn btn-secondary" 
                             style={{ padding: '6px 10px', fontSize: '12px', color: 'var(--color-lose)' }}
+                            title="Hapus"
                           >
                             <Trash2 size={12} />
                           </button>
@@ -820,12 +879,20 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
               >
                 Hapus Trade Jurnal
               </button>
-              <button 
-                onClick={() => setSelectedTrade(null)} 
-                className="btn btn-secondary"
-              >
-                Tutup Detail
-              </button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button 
+                  onClick={() => handleEditTrade(selectedTrade)} 
+                  className="btn btn-primary"
+                >
+                  <Pencil size={14} /> Edit Trade
+                </button>
+                <button 
+                  onClick={() => setSelectedTrade(null)} 
+                  className="btn btn-secondary"
+                >
+                  Tutup Detail
+                </button>
+              </div>
             </div>
           </div>
         </div>
