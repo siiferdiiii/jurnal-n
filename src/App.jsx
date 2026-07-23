@@ -9,9 +9,11 @@ import {
   User,
   Eye,
   EyeOff,
+  Zap,
 } from 'lucide-react';
 
 import { onAuthStateChange, signOut } from './lib/auth';
+import Mt5Modal from './components/Mt5Modal';
 
 /** Helper to mask user email for privacy */
 const maskEmail = (email) => {
@@ -35,6 +37,7 @@ function App() {
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [dbTrigger,  setDbTrigger]  = useState(0);
   const [showEmail,  setShowEmail]  = useState(() => localStorage.getItem('showEmail') === 'true');
+  const [isMt5ModalOpen, setIsMt5ModalOpen] = useState(false);
 
   const toggleShowEmail = () => {
     setShowEmail(prev => {
@@ -115,6 +118,26 @@ function App() {
               <span className="label-short">{item.short}</span>
             </button>
           ))}
+
+          {/* MT5 Sync Button */}
+          <button
+            onClick={() => setIsMt5ModalOpen(true)}
+            style={{
+              marginTop: '12px',
+              display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+              padding: '10px 14px', borderRadius: '10px',
+              background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15))',
+              border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa',
+              fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(139,92,246,0.25))'}
+            onMouseLeave={e => e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15))'}
+          >
+            <Zap size={16} />
+            <span className="label-full">Integrasi MT5</span>
+            <span className="label-short">MT5</span>
+          </button>
         </nav>
         <div className="nav-footer">
           {/* User info */}
@@ -181,6 +204,13 @@ function App() {
       <main className="main-content">
         {renderActivePage()}
       </main>
+
+      {/* MT5 Modal */}
+      <Mt5Modal
+        isOpen={isMt5ModalOpen}
+        onClose={() => setIsMt5ModalOpen(false)}
+        userId={userId}
+      />
     </div>
   );
 }

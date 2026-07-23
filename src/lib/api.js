@@ -38,6 +38,26 @@ async function uploadImage(base64OrUrl, userId, recordId, type) {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   TRADING SESSION CALCULATOR
+───────────────────────────────────────────────────────────── */
+
+export function calculateTradingSession(timeInput) {
+  if (!timeInput) return 'Unknown';
+  const date = new Date(timeInput);
+  const hour = date.getUTCHours();
+
+  if (hour >= 13 && hour < 16) {
+    return 'London - NY Overlap';
+  } else if (hour >= 8 && hour < 16) {
+    return 'London';
+  } else if (hour >= 13 && hour < 21) {
+    return 'New York';
+  } else {
+    return 'Asia';
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
    SCHEMA MAPPERS — camelCase (React) ↔ snake_case (Supabase)
 ───────────────────────────────────────────────────────────── */
 
@@ -47,13 +67,13 @@ function jurnalToDb(j, userId, premUrl, resUrl) {
     tanggal:              j.tanggal,
     pair:                 j.pair,
     arah:                 j.arah,
-    jenis_trade:          j.jenisTrade,
+    jenis_trade:          j.jenisTrade || null,
     metode_id:            j.metodeId || null,
     checklist_terpenuhi:  j.checklistTerpenuhi  ?? [],
     key_level_digunakan:  j.keyLevelDigunakan   ?? null,
     trigger_entry:        j.triggerEntry         ?? null,
     risk_reward_ratio:    j.riskRewardRatio      ?? null,
-    hasil_trade:          j.hasilTrade,
+    hasil_trade:          j.hasilTrade          || null,
     profit_nominal:       j.profitNominal        ?? null,
     rr_diperoleh:         j.rrDiperoleh          ?? null,
     psikologi_sebelum:    j.psikologiSebelum     ?? null,
@@ -63,6 +83,17 @@ function jurnalToDb(j, userId, premUrl, resUrl) {
     catatan_hari_ini:     j.catatanHariIni       ?? null,
     foto_premarket_url:   premUrl,
     foto_result_url:      resUrl,
+    // MT5 Auto-Sync Fields
+    mt5_ticket:           j.mt5Ticket           ?? null,
+    lot_size:             j.lotSize              ?? null,
+    open_price:           j.openPrice            ?? null,
+    close_price:          j.closePrice           ?? null,
+    sl_price:             j.slPrice              ?? null,
+    tp_price:             j.tpPrice              ?? null,
+    open_time:            j.openTime             ?? null,
+    close_time:           j.closeTime            ?? null,
+    sesi:                 j.sesi || (j.openTime ? calculateTradingSession(j.openTime) : null),
+    is_auto_synced:       j.isAutoSynced         ?? false,
   };
 }
 
@@ -88,6 +119,17 @@ function jurnalFromDb(row) {
     catatanHariIni:       row.catatan_hari_ini,
     fotoPremarket:        row.foto_premarket_url,
     fotoResult:           row.foto_result_url,
+    // MT5 Auto-Sync Fields
+    mt5Ticket:            row.mt5_ticket,
+    lotSize:              row.lot_size          != null ? Number(row.lot_size)         : null,
+    openPrice:            row.open_price        != null ? Number(row.open_price)       : null,
+    closePrice:           row.close_price       != null ? Number(row.close_price)      : null,
+    slPrice:              row.sl_price          != null ? Number(row.sl_price)         : null,
+    tpPrice:              row.tp_price          != null ? Number(row.tp_price)         : null,
+    openTime:             row.open_time,
+    closeTime:            row.close_time,
+    sesi:                 row.sesi || (row.open_time ? calculateTradingSession(row.open_time) : null),
+    isAutoSynced:         Boolean(row.is_auto_synced),
     createdAt:            new Date(row.created_at).getTime(),
   };
 }

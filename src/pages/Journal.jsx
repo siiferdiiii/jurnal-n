@@ -649,9 +649,21 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
                         <span className="flex-align-center gap-10">
                           <CalendarIcon size={14} className="text-secondary" />
                           {trade.tanggal}
+                          {trade.isAutoSynced && (
+                            <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(59,130,246,0.15)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.3)', fontWeight: 'bold' }}>
+                              MT5
+                            </span>
+                          )}
                         </span>
                       </td>
-                      <td style={{ padding: '16px 20px', fontWeight: '700', color: '#fff' }}>{trade.pair}</td>
+                      <td style={{ padding: '16px 20px', fontWeight: '700', color: '#fff' }}>
+                        {trade.pair}
+                        {trade.lotSize && (
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'normal' }}>
+                            {trade.lotSize} Lot {trade.sesi ? `• ${trade.sesi}` : ''}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ padding: '16px 20px' }}>
                         <span className={`badge ${trade.arah === 'BUY' ? 'badge-buy' : 'badge-sell'}`}>
                           {trade.arah}
@@ -727,9 +739,47 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
               </span>
             </div>
 
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
               Dibuat pada tanggal <strong>{selectedTrade.tanggal}</strong> • Metode: <strong>{getMethodName(selectedTrade.metodeId)}</strong>
             </p>
+
+            {/* MT5 Execution Card */}
+            {(selectedTrade.isAutoSynced || selectedTrade.mt5Ticket) && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1))',
+                border: '1px solid rgba(59,130,246,0.25)', borderRadius: '12px',
+                padding: '16px', marginBottom: '24px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    ⚡ MT5 Auto-Synced Execution
+                  </span>
+                  {selectedTrade.mt5Ticket && (
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                      Ticket #{selectedTrade.mt5Ticket}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px', fontSize: '12px' }}>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', display: 'block' }}>Sesi Trading:</span>
+                    <strong style={{ color: '#fff' }}>{selectedTrade.sesi || 'Asia'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', display: 'block' }}>Lot / Volume:</span>
+                    <strong style={{ color: '#fff' }}>{selectedTrade.lotSize ?? '-'} Lot</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', display: 'block' }}>Open Price:</span>
+                    <strong style={{ color: '#fff', fontFamily: 'monospace' }}>{selectedTrade.openPrice ?? '-'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)', display: 'block' }}>Close Price:</span>
+                    <strong style={{ color: '#fff', fontFamily: 'monospace' }}>{selectedTrade.closePrice ?? '-'}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Grid Chart Perbandingan */}
             <div className="chart-comparison-grid">
