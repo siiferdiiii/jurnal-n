@@ -310,7 +310,11 @@ export async function seedInitialData() {
       faktorKesalahan: [],
       fotoPremarket: generateMockChartDataURL('EURUSD BUY Setup (Continuation)', 'premarket'),
       fotoResult: generateMockChartDataURL('EURUSD BUY Profit Result', 'result'),
-      catatanHariIni: 'Trade berjalan sangat mulus sesuai rencana. FVG terisi penuh lalu harga langsung memantul ke arah TP.'
+      catatanHariIni: 'Trade berjalan sangat mulus sesuai rencana. FVG terisi penuh lalu harga langsung memantul ke arah TP.',
+      komentarSetup: [
+        { id: 'c-1', text: '🎯 Premarket setup terkonfirmasi FVG 15m. Bias HTF Bullish.', createdAt: Date.now() - 8 * 24 * 3600 * 1000 },
+        { id: 'c-2', text: '💡 Re-entry di Sesi London berjalan lancar, TP 3R tersentuh presisi.', createdAt: Date.now() - 8 * 24 * 3600 * 1000 + 3600000 }
+      ]
     },
     {
       id: 'trade-2',
@@ -336,7 +340,10 @@ export async function seedInitialData() {
       faktorKesalahan: ['fomo', 'takut'],
       fotoPremarket: generateMockChartDataURL('GBPUSD BUY Setup (Reversal)', 'premarket'),
       fotoResult: generateMockChartDataURL('GBPUSD BUY Stop Out', 'result'),
-      catatanHariIni: 'Entry dipaksakan terlalu dini sebelum lilin benar-benar terkonfirmasi ditutup di atas fibo. Harga meluncur turun menembus SL sebelum akhirnya berbalik naik. FOMO merusak entry ini.'
+      catatanHariIni: 'Entry dipaksakan terlalu dini sebelum lilin benar-benar terkonfirmasi ditutup di atas fibo. Harga meluncur turun menembus SL sebelum akhirnya berbalik naik. FOMO merusak entry ini.',
+      komentarSetup: [
+        { id: 'c-3', text: '⚠️ Catatan Evaluasi: Jangan jump entry sebelum candle 5m close di atas Fibo 0.618.', createdAt: Date.now() - 6 * 24 * 3600 * 1000 }
+      ]
     },
     {
       id: 'trade-3',

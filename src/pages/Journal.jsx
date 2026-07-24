@@ -12,10 +12,26 @@ import {
   TrendingUp,
   Brain,
   X,
-  Pencil
+  Pencil,
+  MessageSquare,
+  Send,
+  User,
+  Check
 } from 'lucide-react';
 import { getJurnal, getMetode, saveJurnal, deleteJurnal } from '../lib/api';
 import Lightbox from '../components/Lightbox';
+
+function formatCommentTime(ts) {
+  if (!ts) return '';
+  const date = new Date(ts);
+  return date.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
 
 // Helper kompresi gambar
 function compressImage(file) {
@@ -62,6 +78,11 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
   
   // Edit State
   const [editingTradeId, setEditingTradeId] = useState(null);
+
+  // Comment states for detail modal
+  const [newCommentText, setNewCommentText] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
 
   // States for Filtering
   const [filterPair, setFilterPair] = useState('');
@@ -288,6 +309,80 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
         console.error('Gagal menghapus trade:', err);
         alert('Gagal menghapus trade. Coba lagi.');
       }
+    }
+  };
+
+  /* Comment Handlers */
+  const handleAddComment = async (tradeId, text) => {
+    if (!text || !text.trim()) return;
+    const currentTrade = journals.find(t => t.id === tradeId);
+    if (!currentTrade) return;
+
+    const newComment = {
+      id: 'comm-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      text: text.trim(),
+      createdAt: Date.now()
+    };
+
+    const updatedComments = [...(currentTrade.komentarSetup || []), newComment];
+    const updatedTrade = { ...currentTrade, komentarSetup: updatedComments };
+
+    setJournals(prev => prev.map(t => t.id === tradeId ? updatedTrade : t));
+    if (selectedTrade?.id === tradeId) {
+      setSelectedTrade(updatedTrade);
+    }
+    setNewCommentText('');
+
+    try {
+      await saveJurnal(updatedTrade, userId);
+      onDataChange();
+    } catch (err) {
+      console.error('Gagal menyimpan komentar:', err);
+    }
+  };
+
+  const handleDeleteComment = async (tradeId, commentId) => {
+    const currentTrade = journals.find(t => t.id === tradeId);
+    if (!currentTrade) return;
+
+    const updatedComments = (currentTrade.komentarSetup || []).filter(c => c.id !== commentId);
+    const updatedTrade = { ...currentTrade, komentarSetup: updatedComments };
+
+    setJournals(prev => prev.map(t => t.id === tradeId ? updatedTrade : t));
+    if (selectedTrade?.id === tradeId) {
+      setSelectedTrade(updatedTrade);
+    }
+
+    try {
+      await saveJurnal(updatedTrade, userId);
+      onDataChange();
+    } catch (err) {
+      console.error('Gagal menghapus komentar:', err);
+    }
+  };
+
+  const handleSaveEditedComment = async (tradeId, commentId) => {
+    if (!editingCommentText.trim()) return;
+    const currentTrade = journals.find(t => t.id === tradeId);
+    if (!currentTrade) return;
+
+    const updatedComments = (currentTrade.komentarSetup || []).map(c => 
+      c.id === commentId ? { ...c, text: editingCommentText.trim() } : c
+    );
+    const updatedTrade = { ...currentTrade, komentarSetup: updatedComments };
+
+    setJournals(prev => prev.map(t => t.id === tradeId ? updatedTrade : t));
+    if (selectedTrade?.id === tradeId) {
+      setSelectedTrade(updatedTrade);
+    }
+    setEditingCommentId(null);
+    setEditingCommentText('');
+
+    try {
+      await saveJurnal(updatedTrade, userId);
+      onDataChange();
+    } catch (err) {
+      console.error('Gagal memperbarui komentar:', err);
     }
   };
 
@@ -919,6 +1014,128 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
                 </p>
               </div>
             )}
+
+            {/* Seksi Komentar & Catatan Setup */}
+            <div className="comments-section">
+              <div className="comments-header">
+                <div className="comments-title">
+                  <MessageSquare size={18} style={{ color: 'var(--accent)' }} />
+                  <span>Komentar & Catatan Setup</span>
+                  <span className="comments-count-pill">
+                    {selectedTrade.komentarSetup ? selectedTrade.komentarSetup.length : 0}
+                  </span>
+                </div>
+              </div>
+
+              {/* Comments List */}
+              <div className="comments-list">
+                {(!selectedTrade.komentarSetup || selectedTrade.komentarSetup.length === 0) ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                    Belum ada komentar setup. Tambahkan komentar atau catatan evaluasi untuk setup ini!
+                  </div>
+                ) : (
+                  selectedTrade.komentarSetup.map((comm) => (
+                    <div key={comm.id} className="comment-item">
+                      <div className="comment-avatar">
+                        <User size={16} />
+                      </div>
+                      <div className="comment-content">
+                        <div className="comment-meta">
+                          <span className="comment-author">Trader</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span className="comment-time">{formatCommentTime(comm.createdAt)}</span>
+                            <div className="comment-actions">
+                              <button
+                                className="comment-action-btn"
+                                title="Edit Komentar"
+                                onClick={() => {
+                                  setEditingCommentId(comm.id);
+                                  setEditingCommentText(comm.text);
+                                }}
+                              >
+                                <Pencil size={12} />
+                              </button>
+                              <button
+                                className="comment-action-btn delete"
+                                title="Hapus Komentar"
+                                onClick={() => handleDeleteComment(selectedTrade.id, comm.id)}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {editingCommentId === comm.id ? (
+                          <div style={{ marginTop: '6px', display: 'flex', gap: '6px' }}>
+                            <input
+                              type="text"
+                              value={editingCommentText}
+                              onChange={e => setEditingCommentText(e.target.value)}
+                              style={{ flex: 1, padding: '6px 10px', fontSize: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--accent)', borderRadius: '6px', color: '#fff' }}
+                              onKeyDown={e => { if (e.key === 'Enter') handleSaveEditedComment(selectedTrade.id, comm.id); }}
+                            />
+                            <button
+                              onClick={() => handleSaveEditedComment(selectedTrade.id, comm.id)}
+                              className="btn btn-primary"
+                              style={{ padding: '6px 10px', fontSize: '12px' }}
+                            >
+                              <Check size={12} /> Simpan
+                            </button>
+                            <button
+                              onClick={() => { setEditingCommentId(null); setEditingCommentText(''); }}
+                              className="btn btn-secondary"
+                              style={{ padding: '6px 10px', fontSize: '12px' }}
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="comment-text">{comm.text}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Form Add Comment */}
+              <div className="comment-form">
+                <div className="comment-quick-tags">
+                  {['🎯 Target Hit', '⚠️ High Impact News', '📌 Re-entry Plan', '💡 Lesson Learned'].map((tag) => (
+                    <span
+                      key={tag}
+                      className="tag-chip"
+                      onClick={() => setNewCommentText(prev => prev ? `${prev} ${tag}` : tag)}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <div className="comment-input-wrapper">
+                  <input
+                    type="text"
+                    placeholder="Tulis komentar/catatan setup baru... (Tekan Enter)"
+                    value={newCommentText}
+                    onChange={e => setNewCommentText(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAddComment(selectedTrade.id, newCommentText);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="comment-send-btn"
+                    onClick={() => handleAddComment(selectedTrade.id, newCommentText)}
+                  >
+                    <Send size={14} />
+                    Kirim
+                  </button>
+                </div>
+              </div>
+            </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>
               <button 
