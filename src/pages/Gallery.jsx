@@ -72,11 +72,11 @@ export default function Gallery({ dbTrigger, userId }) {
   const [filterResult, setFilterResult] = useState('');
 
   useEffect(() => {
-    Promise.all([getMetode(), getJurnal()]).then(([m, j]) => {
+    Promise.all([getMetode(userId), getJurnal(userId)]).then(([m, j]) => {
       setMethods(m);
       setTrades(j.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal)));
     });
-  }, [dbTrigger]);
+  }, [dbTrigger, userId]);
 
   const getMethodName = (id) => {
     const found = methods.find(m => m.id === id);

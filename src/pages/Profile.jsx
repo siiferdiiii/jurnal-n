@@ -124,8 +124,9 @@ export default function Profile({ session, onDataChange }) {
   };
 
   useEffect(() => {
+    if (!userId) return;
     setIsLoadingStats(true);
-    getJurnal()
+    getJurnal(userId)
       .then((trades) => {
         const total = trades.length;
         const wins = trades.filter((t) => t.hasilTrade === 'win').length;

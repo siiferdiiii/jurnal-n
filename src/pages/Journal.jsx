@@ -123,11 +123,11 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
 
   // Load methods & journals
   useEffect(() => {
-    Promise.all([getMetode(), getJurnal()]).then(([m, j]) => {
+    Promise.all([getMetode(userId), getJurnal(userId)]).then(([m, j]) => {
       setMethods(m);
       setJournals(j.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal)));
     });
-  }, [dbTrigger]);
+  }, [dbTrigger, userId]);
 
   const resetForm = () => {
     setEditingTradeId(null);

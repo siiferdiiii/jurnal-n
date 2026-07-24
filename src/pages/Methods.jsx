@@ -123,11 +123,11 @@ export default function Methods({ dbTrigger, onDataChange, userId }) {
   const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
-    Promise.all([getMetode(), getJurnal()]).then(([metodeData, jurnalData]) => {
+    Promise.all([getMetode(userId), getJurnal(userId)]).then(([metodeData, jurnalData]) => {
       setMethods(metodeData);
       setTrades(jurnalData);
     });
-  }, [dbTrigger]);
+  }, [dbTrigger, userId]);
 
   // Generic add/remove helpers
   const makeAdder = (list, setList, input, setInput) => () => {

@@ -596,10 +596,10 @@ export default function Dashboard({ dbTrigger, userId }) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
-    getJurnal().then(data => {
+    getJurnal(userId).then(data => {
       setTrades(data.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal)));
     });
-  }, [dbTrigger]);
+  }, [dbTrigger, userId]);
 
   // KPI
   const totalTrades = trades.length;

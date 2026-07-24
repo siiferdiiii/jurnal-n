@@ -167,11 +167,23 @@ function metodeFromDb(row) {
    JURNAL API
 ───────────────────────────────────────────────────────────── */
 
-export async function getJurnal() {
-  const { data, error } = await supabase
+export async function getJurnal(userId) {
+  let targetUserId = userId;
+  if (!targetUserId) {
+    const { data: { session } } = await supabase.auth.getSession();
+    targetUserId = session?.user?.id;
+  }
+
+  let query = supabase
     .from('jurnal')
     .select('*')
     .order('tanggal', { ascending: false });
+
+  if (targetUserId) {
+    query = query.eq('user_id', targetUserId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data.map(jurnalFromDb);
 }
@@ -223,11 +235,23 @@ export async function deleteJurnal(id) {
    METODE API
 ───────────────────────────────────────────────────────────── */
 
-export async function getMetode() {
-  const { data, error } = await supabase
+export async function getMetode(userId) {
+  let targetUserId = userId;
+  if (!targetUserId) {
+    const { data: { session } } = await supabase.auth.getSession();
+    targetUserId = session?.user?.id;
+  }
+
+  let query = supabase
     .from('metode')
     .select('*')
     .order('created_at', { ascending: true });
+
+  if (targetUserId) {
+    query = query.eq('user_id', targetUserId);
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data.map(metodeFromDb);
 }
