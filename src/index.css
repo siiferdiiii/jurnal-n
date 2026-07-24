@@ -745,8 +745,9 @@ body {
   }
   
   .logo-section, 
-  .nav-footer {
-    display: none;
+  .nav-footer,
+  .mt5-sync-nav-btn {
+    display: none !important;
   }
   
   .nav-links {

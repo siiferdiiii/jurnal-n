@@ -122,6 +122,7 @@ function App() {
           {/* MT5 Sync Button */}
           <button
             onClick={() => setIsMt5ModalOpen(true)}
+            className="mt5-sync-nav-btn"
             style={{
               marginTop: '12px',
               display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
