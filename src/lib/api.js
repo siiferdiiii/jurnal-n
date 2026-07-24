@@ -259,3 +259,134 @@ export async function deleteMetode(id) {
   const { error } = await supabase.from('metode').delete().eq('id', id);
   if (error) throw error;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   PROFILES API — Top Traders
+───────────────────────────────────────────────────────────── */
+
+/** Get own profile (returns null if not set yet) */
+export async function getMyProfile(userId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Create or update own profile */
+export async function upsertProfile({ userId, displayName, bio, isPublic }) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .upsert(
+      {
+        user_id:      userId,
+        display_name: displayName,
+        bio:          bio || null,
+        is_public:    isPublic,
+        updated_at:   new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Fetch all public traders (profiles + aggregated stats from jurnal) */
+export async function getPublicTraders() {
+  // 1. Get all public profiles
+  const { data: profiles, error: profErr } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('is_public', true)
+    .order('created_at', { ascending: false });
+  if (profErr) throw profErr;
+  if (!profiles || profiles.length === 0) return [];
+
+  // 2. Fetch jurnal for each public trader and compute stats client-side
+  const traderIds = profiles.map((p) => p.user_id);
+  const { data: trades, error: tradeErr } = await supabase
+    .from('jurnal')
+    .select('user_id, hasil_trade, profit_nominal, rr_diperoleh, pair, tanggal, foto_premarket_url, foto_result_url')
+    .in('user_id', traderIds);
+  if (tradeErr) throw tradeErr;
+
+  // 3. Compute stats per trader
+  const tradeMap = {};
+  (trades || []).forEach((t) => {
+    if (!tradeMap[t.user_id]) tradeMap[t.user_id] = [];
+    tradeMap[t.user_id].push(t);
+  });
+
+  return profiles.map((p) => {
+    const ts = tradeMap[p.user_id] || [];
+    const total = ts.length;
+    const wins  = ts.filter((t) => t.hasil_trade === 'win').length;
+    const totalPnl = ts.reduce((s, t) => s + (Number(t.profit_nominal) || 0), 0);
+    const totalRr  = ts.reduce((s, t) => s + (Number(t.rr_diperoleh) || 0), 0);
+    const avgRr   = total > 0 ? +(totalRr / total).toFixed(2) : 0;
+    const winRate = total > 0 ? +((wins / total) * 100).toFixed(1) : 0;
+    const pairs   = [...new Set(ts.map((t) => t.pair))].length;
+    const hasPhotos = ts.some((t) => t.foto_premarket_url || t.foto_result_url);
+    return {
+      userId:      p.user_id,
+      displayName: p.display_name,
+      bio:         p.bio,
+      joinedAt:    p.created_at,
+      total,
+      wins,
+      winRate,
+      totalPnl,
+      avgRr,
+      pairs,
+      hasPhotos,
+    };
+  });
+}
+
+/** Fetch all trades for a public trader (for their gallery/stats view) */
+export async function getTraderJurnal(traderId) {
+  const { data, error } = await supabase
+    .from('jurnal')
+    .select('*')
+    .eq('user_id', traderId)
+    .order('tanggal', { ascending: false });
+  if (error) throw error;
+  return data.map(jurnalFromDb);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TRADER COMMENTS API
+───────────────────────────────────────────────────────────── */
+
+/** Get comments for a trader profile */
+export async function getTraderComments(traderId) {
+  const { data, error } = await supabase
+    .from('trader_comments')
+    .select('*')
+    .eq('trader_id', traderId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+/** Post a comment on a trader profile */
+export async function addTraderComment({ traderId, authorId, authorName, text }) {
+  const { data, error } = await supabase
+    .from('trader_comments')
+    .insert({ trader_id: traderId, author_id: authorId, author_name: authorName, text })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Delete own comment */
+export async function deleteTraderComment(commentId) {
+  const { error } = await supabase.from('trader_comments').delete().eq('id', commentId);
+  if (error) throw error;
+}
+

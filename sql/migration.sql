@@ -120,3 +120,90 @@ DROP POLICY IF EXISTS "charts_read_policy" ON storage.objects;
 CREATE POLICY "charts_read_policy" ON storage.objects
   FOR SELECT TO public
   USING (bucket_id = 'charts');
+
+-- ============================================================
+-- TOP TRADERS — Jalankan bagian ini di Supabase SQL Editor
+-- ============================================================
+
+-- 6. Tabel Profiles (profil publik trader)
+CREATE TABLE IF NOT EXISTS profiles (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
+  display_name TEXT NOT NULL DEFAULT 'Trader',
+  bio          TEXT,
+  is_public    BOOLEAN NOT NULL DEFAULT false,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "profiles_read"  ON profiles;
+DROP POLICY IF EXISTS "profiles_write" ON profiles;
+
+-- Siapapun bisa baca profil publik; user bisa baca miliknya sendiri
+CREATE POLICY "profiles_read" ON profiles
+  FOR SELECT USING (is_public = true OR auth.uid() = user_id);
+
+-- Hanya pemilik yang bisa tulis
+CREATE POLICY "profiles_write" ON profiles
+  FOR ALL USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_user   ON profiles (user_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_public ON profiles (is_public) WHERE is_public = true;
+
+-- 7. Tabel Trader Comments (komentar di profil trader)
+CREATE TABLE IF NOT EXISTS trader_comments (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trader_id   UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  author_id   UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  author_name TEXT NOT NULL,
+  text        TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE trader_comments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "comments_read"   ON trader_comments;
+DROP POLICY IF EXISTS "comments_insert" ON trader_comments;
+DROP POLICY IF EXISTS "comments_delete" ON trader_comments;
+
+-- Pengguna login bisa baca semua komentar
+CREATE POLICY "comments_read" ON trader_comments
+  FOR SELECT TO authenticated USING (true);
+
+-- Hanya bisa insert sebagai diri sendiri
+CREATE POLICY "comments_insert" ON trader_comments
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = author_id);
+
+-- Hanya bisa hapus komentar sendiri
+CREATE POLICY "comments_delete" ON trader_comments
+  FOR DELETE TO authenticated USING (auth.uid() = author_id);
+
+CREATE INDEX IF NOT EXISTS idx_comments_trader ON trader_comments (trader_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_comments_author ON trader_comments (author_id);
+
+-- 8. Update RLS jurnal — izinkan baca jurnal trader publik
+-- Hapus policy ALL lama, pisah menjadi SELECT dan write terpisah
+DROP POLICY IF EXISTS "jurnal_user_policy"      ON jurnal;
+DROP POLICY IF EXISTS "jurnal_public_read"      ON jurnal;
+DROP POLICY IF EXISTS "jurnal_user_write"       ON jurnal;
+
+-- SELECT: user bisa baca milik sendiri ATAU milik trader yang profilnya publik
+CREATE POLICY "jurnal_public_read" ON jurnal
+  FOR SELECT TO authenticated
+  USING (
+    auth.uid() = user_id
+    OR EXISTS (
+      SELECT 1 FROM profiles p
+      WHERE p.user_id = jurnal.user_id AND p.is_public = true
+    )
+  );
+
+-- INSERT / UPDATE / DELETE: hanya pemilik
+CREATE POLICY "jurnal_user_write" ON jurnal
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+  

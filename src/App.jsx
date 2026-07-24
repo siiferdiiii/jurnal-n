@@ -11,6 +11,7 @@ import {
   EyeOff,
   Zap,
   UserCircle,
+  Trophy,
 } from 'lucide-react';
 
 import { onAuthStateChange, signOut } from './lib/auth';
@@ -27,19 +28,22 @@ const maskEmail = (email) => {
   return `${localPart[0]}***${localPart[localPart.length - 1]}@${domain}`;
 };
 
-import Auth      from './pages/Auth';
-import Dashboard from './pages/Dashboard';
-import Journal   from './pages/Journal';
-import Methods   from './pages/Methods';
-import Gallery   from './pages/Gallery';
-import Profile   from './pages/Profile';
+import Auth        from './pages/Auth';
+import Dashboard   from './pages/Dashboard';
+import Journal     from './pages/Journal';
+import Methods     from './pages/Methods';
+import Gallery     from './pages/Gallery';
+import Profile     from './pages/Profile';
+import TopTraders  from './pages/TopTraders';
+import TraderProfile from './pages/TraderProfile';
 
 function App() {
-  const [session,    setSession]    = useState(undefined); // undefined = loading
-  const [currentTab, setCurrentTab] = useState('dashboard');
-  const [dbTrigger,  setDbTrigger]  = useState(0);
-  const [showEmail,  setShowEmail]  = useState(() => localStorage.getItem('showEmail') === 'true');
-  const [isMt5ModalOpen, setIsMt5ModalOpen] = useState(false);
+  const [session,          setSession]          = useState(undefined);
+  const [currentTab,       setCurrentTab]       = useState('dashboard');
+  const [dbTrigger,        setDbTrigger]        = useState(0);
+  const [showEmail,        setShowEmail]        = useState(() => localStorage.getItem('showEmail') === 'true');
+  const [isMt5ModalOpen,   setIsMt5ModalOpen]   = useState(false);
+  const [selectedTrader,   setSelectedTrader]   = useState(null); // for TopTraders → TraderProfile
 
   const toggleShowEmail = () => {
     setShowEmail(prev => {
@@ -83,22 +87,28 @@ function App() {
 
   // ── Authenticated → show main app
   const renderActivePage = () => {
+    // TraderProfile is a sub-view inside the TopTraders tab
+    if (currentTab === 'top-traders' && selectedTrader) {
+      return <TraderProfile trader={selectedTrader} session={session} onBack={() => setSelectedTrader(null)} />;
+    }
     switch (currentTab) {
       case 'dashboard': return <Dashboard dbTrigger={dbTrigger} userId={userId} />;
       case 'jurnal':    return <Journal   dbTrigger={dbTrigger} onDataChange={triggerDataRefresh} userId={userId} />;
       case 'metode':    return <Methods   dbTrigger={dbTrigger} onDataChange={triggerDataRefresh} userId={userId} />;
       case 'galeri':    return <Gallery   dbTrigger={dbTrigger} userId={userId} />;
       case 'profil':    return <Profile   session={session} onDataChange={triggerDataRefresh} />;
+      case 'top-traders': return <TopTraders onSelectTrader={(t) => setSelectedTrader(t)} />;
       default:          return <Dashboard dbTrigger={dbTrigger} userId={userId} />;
     }
   };
 
   const navItems = [
-    { id: 'dashboard', icon: <LayoutDashboard size={18} className="nav-icon" />, full: 'Dashboard',         short: 'Beranda' },
-    { id: 'jurnal',    icon: <BookOpen        size={18} className="nav-icon" />, full: 'Catatan Jurnal',    short: 'Jurnal'  },
-    { id: 'metode',    icon: <CheckSquare     size={18} className="nav-icon" />, full: 'Manajemen Metode', short: 'Metode'  },
-    { id: 'galeri',    icon: <ImageIcon       size={18} className="nav-icon" />, full: 'Galeri Chart',     short: 'Galeri'  },
-    { id: 'profil',    icon: <UserCircle      size={18} className="nav-icon" />, full: 'Profil Saya',      short: 'Profil'  },
+    { id: 'dashboard',   icon: <LayoutDashboard size={18} className="nav-icon" />, full: 'Dashboard',         short: 'Beranda',    desktopOnly: false },
+    { id: 'jurnal',      icon: <BookOpen        size={18} className="nav-icon" />, full: 'Catatan Jurnal',    short: 'Jurnal',     desktopOnly: false },
+    { id: 'metode',      icon: <CheckSquare     size={18} className="nav-icon" />, full: 'Manajemen Metode', short: 'Metode',     desktopOnly: false },
+    { id: 'galeri',      icon: <ImageIcon       size={18} className="nav-icon" />, full: 'Galeri Chart',     short: 'Galeri',     desktopOnly: false },
+    { id: 'profil',      icon: <UserCircle      size={18} className="nav-icon" />, full: 'Profil Saya',      short: 'Profil',     desktopOnly: false },
+    { id: 'top-traders', icon: <Trophy          size={18} className="nav-icon" />, full: 'Top Traders',       short: 'Traders',    desktopOnly: true  },
   ];
 
   return (
@@ -114,8 +124,8 @@ function App() {
           {navItems.map(item => (
             <button
               key={item.id}
-              className={`nav-item ${currentTab === item.id ? 'active' : ''}`}
-              onClick={() => setCurrentTab(item.id)}
+              className={`nav-item ${currentTab === item.id ? 'active' : ''} ${item.desktopOnly ? 'desktop-only-nav' : ''}`}
+              onClick={() => { setCurrentTab(item.id); setSelectedTrader(null); }}
             >
               {item.icon}
               <span className="label-full">{item.full}</span>

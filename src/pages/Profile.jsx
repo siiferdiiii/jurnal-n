@@ -17,10 +17,13 @@ import {
   Eye,
   EyeOff,
   LogOut,
+  Globe,
+  EyeOff as EyeOffIcon,
+  Trophy,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { signOut } from '../lib/auth';
-import { getJurnal } from '../lib/api';
+import { getJurnal, getMyProfile, upsertProfile } from '../lib/api';
 
 function StatCard({ icon, label, value, sub, color = 'var(--accent)' }) {
   return (
@@ -84,9 +87,41 @@ export default function Profile({ session, onDataChange }) {
   const [isSavingPw, setIsSavingPw] = useState(false);
   const [pwMessage, setPwMessage] = useState(null); // { type: 'success'|'error', text }
 
+  // Public profile state
+  const [isPublic,    setIsPublic]    = useState(false);
+  const [bio,         setBio]         = useState('');
+  const [isSavingPub, setIsSavingPub] = useState(false);
+  const [pubMessage,  setPubMessage]  = useState(null);
+
   // Trade stats
   const [stats, setStats] = useState(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  // Load own public profile
+  useEffect(() => {
+    if (!userId) return;
+    getMyProfile(userId).then(p => {
+      if (p) {
+        setIsPublic(p.is_public || false);
+        setBio(p.bio || '');
+      }
+    }).catch(console.error);
+  }, [userId]);
+
+  const handleSavePublicProfile = async (e) => {
+    e.preventDefault();
+    setIsSavingPub(true);
+    setPubMessage(null);
+    try {
+      await upsertProfile({ userId, displayName, bio, isPublic });
+      setPubMessage({ type: 'success', text: isPublic ? 'Profil kini tampil di Top Traders!' : 'Profil disembunyikan dari Top Traders.' });
+      setTimeout(() => setPubMessage(null), 3500);
+    } catch (err) {
+      setPubMessage({ type: 'error', text: err.message || 'Gagal menyimpan.' });
+    } finally {
+      setIsSavingPub(false);
+    }
+  };
 
   useEffect(() => {
     setIsLoadingStats(true);
@@ -476,6 +511,72 @@ export default function Profile({ session, onDataChange }) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ── Visibilitas Publik (Top Traders) ── */}
+      <div className="glass-card" style={{ marginTop: '20px', padding: '24px', border: isPublic ? '1px solid rgba(99,102,241,0.3)' : undefined, background: isPublic ? 'linear-gradient(135deg, rgba(99,102,241,0.07), rgba(6,182,212,0.05))' : undefined }}>
+        <h2 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-secondary)', fontWeight: '700', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Trophy size={15} style={{ color: '#f59e0b' }} /> Visibilitas Top Traders
+        </h2>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '18px', marginTop: 0 }}>
+          Aktifkan agar profilmu muncul di halaman Top Traders dan trader lain bisa melihat statistik serta galerimu.
+        </p>
+
+        <form onSubmit={handleSavePublicProfile}>
+          {/* Toggle publik */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.07)', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Globe size={16} style={{ color: isPublic ? 'var(--accent)' : 'var(--text-muted)' }} />
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>Jadikan Profil Publik</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>
+                  {isPublic ? 'Profilmu terlihat di Top Traders ✓' : 'Profilmu tersembunyi (privat)'}
+                </div>
+              </div>
+            </div>
+            {/* Toggle switch */}
+            <div
+              onClick={() => setIsPublic(p => !p)}
+              style={{
+                width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer',
+                background: isPublic ? 'var(--accent)' : 'rgba(255,255,255,0.12)',
+                position: 'relative', transition: 'background 0.25s', flexShrink: 0,
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: '3px',
+                left: isPublic ? '23px' : '3px',
+                width: '18px', height: '18px', borderRadius: '50%',
+                background: '#fff', transition: 'left 0.25s',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              }} />
+            </div>
+          </div>
+
+          {/* Bio input */}
+          <div className="form-group" style={{ marginBottom: '16px' }}>
+            <label>Bio Singkat <span style={{ color: 'var(--text-muted)', fontWeight: '400' }}>({bio.length}/160)</span></label>
+            <textarea
+              placeholder="Ceritakan trading style atau strategi andalanmu..."
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, 160))}
+              maxLength={160}
+              rows={2}
+              style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '10px 14px', color: '#fff', fontSize: '13px', resize: 'none', fontFamily: 'var(--font-sans)', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {pubMessage && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: pubMessage.type === 'success' ? 'var(--color-win)' : 'var(--color-lose)', fontSize: '13px', marginBottom: '12px', padding: '10px 14px', background: pubMessage.type === 'success' ? 'rgba(16,185,129,0.08)' : 'rgba(244,63,94,0.08)', borderRadius: '8px', border: `1px solid ${pubMessage.type === 'success' ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)'}` }}>
+              {pubMessage.type === 'success' ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+              {pubMessage.text}
+            </div>
+          )}
+
+          <button type="submit" className="btn btn-primary" disabled={isSavingPub} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+            {isSavingPub ? 'Menyimpan...' : <><Globe size={14} /> Simpan Visibilitas</>}
+          </button>
+        </form>
       </div>
 
       <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', marginTop: '24px', opacity: 0.5 }}>
