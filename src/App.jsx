@@ -10,6 +10,7 @@ import {
   Eye,
   EyeOff,
   Zap,
+  UserCircle,
 } from 'lucide-react';
 
 import { onAuthStateChange, signOut } from './lib/auth';
@@ -31,6 +32,7 @@ import Dashboard from './pages/Dashboard';
 import Journal   from './pages/Journal';
 import Methods   from './pages/Methods';
 import Gallery   from './pages/Gallery';
+import Profile   from './pages/Profile';
 
 function App() {
   const [session,    setSession]    = useState(undefined); // undefined = loading
@@ -86,6 +88,7 @@ function App() {
       case 'jurnal':    return <Journal   dbTrigger={dbTrigger} onDataChange={triggerDataRefresh} userId={userId} />;
       case 'metode':    return <Methods   dbTrigger={dbTrigger} onDataChange={triggerDataRefresh} userId={userId} />;
       case 'galeri':    return <Gallery   dbTrigger={dbTrigger} userId={userId} />;
+      case 'profil':    return <Profile   session={session} onDataChange={triggerDataRefresh} />;
       default:          return <Dashboard dbTrigger={dbTrigger} userId={userId} />;
     }
   };
@@ -95,6 +98,7 @@ function App() {
     { id: 'jurnal',    icon: <BookOpen        size={18} className="nav-icon" />, full: 'Catatan Jurnal',    short: 'Jurnal'  },
     { id: 'metode',    icon: <CheckSquare     size={18} className="nav-icon" />, full: 'Manajemen Metode', short: 'Metode'  },
     { id: 'galeri',    icon: <ImageIcon       size={18} className="nav-icon" />, full: 'Galeri Chart',     short: 'Galeri'  },
+    { id: 'profil',    icon: <UserCircle      size={18} className="nav-icon" />, full: 'Profil Saya',      short: 'Profil'  },
   ];
 
   return (
