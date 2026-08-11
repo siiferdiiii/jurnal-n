@@ -34,8 +34,25 @@ export async function getSession() {
 
 /** Subscribe to auth state changes. Returns unsubscribe function. */
 export function onAuthStateChange(callback) {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session);
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    callback(session, event);
   });
   return () => subscription.unsubscribe();
 }
+
+/** Send password reset email */
+export async function resetPasswordForEmail(email) {
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/`,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/** Update user password (used during recovery flow) */
+export async function updateUserPassword(newPassword) {
+  const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+  return data;
+}
+

@@ -44,6 +44,7 @@ function App() {
   const [showEmail,        setShowEmail]        = useState(() => localStorage.getItem('showEmail') === 'true');
   const [isMt5ModalOpen,   setIsMt5ModalOpen]   = useState(false);
   const [selectedTrader,   setSelectedTrader]   = useState(null); // for TopTraders → TraderProfile
+  const [isRecovery,       setIsRecovery]       = useState(false); // password recovery flow
 
   const toggleShowEmail = () => {
     setShowEmail(prev => {
@@ -55,7 +56,16 @@ function App() {
 
   // Subscribe to auth state changes
   useEffect(() => {
-    const unsub = onAuthStateChange((sess) => setSession(sess));
+    const unsub = onAuthStateChange((sess, event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // User clicked the reset link — show update-password form
+        setIsRecovery(true);
+        setSession(sess); // session is set but we intercept to show reset UI
+      } else {
+        setIsRecovery(false);
+        setSession(sess);
+      }
+    });
     return unsub;
   }, []);
 
@@ -82,8 +92,8 @@ function App() {
     );
   }
 
-  // ── Not authenticated → show Auth page
-  if (!session) return <Auth />;
+  // ── Not authenticated, OR in password-recovery flow → show Auth page
+  if (!session || isRecovery) return <Auth isRecovery={isRecovery} onRecoveryDone={() => setIsRecovery(false)} />;
 
   // ── Authenticated → show main app
   const renderActivePage = () => {
