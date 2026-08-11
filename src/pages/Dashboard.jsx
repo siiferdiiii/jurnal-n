@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   TrendingUp, 
-  TrendingDown, 
   DollarSign, 
   Calendar, 
   Award, 
   Activity, 
   Brain,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
   BarChart2,
   Zap,
@@ -20,6 +17,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { getJurnal } from '../lib/api';
+import PnLCalendar from '../components/PnLCalendar';
 
 /* ─────────────────────────────────────────────
    SUB-COMPONENTS
@@ -593,7 +591,6 @@ function PsychologyAnalyticsSection({ trades }) {
 ───────────────────────────────────────────── */
 export default function Dashboard({ dbTrigger, userId }) {
   const [trades, setTrades] = useState([]);
-  const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     getJurnal(userId).then(data => {
@@ -608,24 +605,6 @@ export default function Dashboard({ dbTrigger, userId }) {
   const totalNetPnL = trades.reduce((acc, cur) => acc + (cur.profitNominal || 0), 0).toFixed(2);
   const cumulativeRR = trades.reduce((acc, cur) => acc + (cur.rrDiperoleh || 0), 0).toFixed(2);
   const avgRR = totalTrades > 0 ? (parseFloat(cumulativeRR) / totalTrades).toFixed(2) : '0.00';
-
-  // Calendar
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  const firstDayIndex = new Date(year, month, 1).getDay();
-  const totalDays = new Date(year, month + 1, 0).getDate();
-  const prevTotalDays = new Date(year, month, 0).getDate();
-  const calendarCells = [];
-  for (let i = firstDayIndex - 1; i >= 0; i--) calendarCells.push({ day: prevTotalDays - i, isCurrentMonth: false, dateString: `${year}-${String(month).padStart(2,'0')}-${String(prevTotalDays-i).padStart(2,'0')}` });
-  for (let i = 1; i <= totalDays; i++) calendarCells.push({ day: i, isCurrentMonth: true, dateString: `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}` });
-  while (calendarCells.length < 42) calendarCells.push({ day: calendarCells.length - firstDayIndex - totalDays + 1, isCurrentMonth: false, dateString: '' });
-
-  const getDailyPnL = (dateStr) => {
-    const dayTrades = trades.filter(t => t.tanggal === dateStr);
-    if (!dayTrades.length) return null;
-    return { pnl: dayTrades.reduce((a, c) => a + (c.profitNominal || 0), 0), count: dayTrades.length };
-  };
 
   const SectionHeader = ({ icon, title, subtitle }) => (
     <div style={{ marginBottom: '20px' }}>
@@ -706,49 +685,7 @@ export default function Dashboard({ dbTrigger, userId }) {
       {/* ── ROW 3: Calendar + Psychology ── */}
       <div className="dashboard-layout-split" style={{ marginTop: '20px' }}>
         {/* Kalender PnL */}
-        <div className="glass-card calendar-widget">
-          <div className="calendar-header">
-            <div className="flex-align-center gap-10">
-              <Calendar size={18} className="text-win" />
-              <h2 style={{ fontSize: '17px', margin: 0 }}>Kalender PnL Harian</h2>
-            </div>
-            <div className="flex-align-center gap-10">
-              <button onClick={() => setCurrentDate(new Date(year, month - 1, 1))} className="btn btn-secondary" style={{ padding: '6px 12px' }}>
-                <ChevronLeft size={16} />
-              </button>
-              <span style={{ fontWeight: '600', fontSize: '13px', minWidth: '110px', textAlign: 'center' }}>
-                {monthNames[month]} {year}
-              </span>
-              <button onClick={() => setCurrentDate(new Date(year, month + 1, 1))} className="btn btn-secondary" style={{ padding: '6px 12px' }}>
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-          <div className="calendar-days-grid">
-            {['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d => <div key={d} className="calendar-day-label">{d}</div>)}
-          </div>
-          <div className="calendar-grid">
-            {calendarCells.map((cell, idx) => {
-              const dailyData = getDailyPnL(cell.dateString);
-              const pnlClass = dailyData ? (dailyData.pnl > 0 ? 'pnl-positive' : dailyData.pnl < 0 ? 'pnl-negative' : 'pnl-neutral') : '';
-              return (
-                <div key={idx} className={`calendar-cell ${cell.isCurrentMonth ? '' : 'other-month'} ${pnlClass} ${dailyData ? 'has-trade' : ''}`}
-                  title={dailyData ? `${dailyData.count} trade | ${dailyData.pnl >= 0 ? '+' : ''}$${dailyData.pnl}` : ''}>
-                  <div className="cell-date">{cell.day}</div>
-                  {dailyData && <div className="cell-pnl">{dailyData.pnl !== 0 ? `${dailyData.pnl > 0 ? '+' : ''}$${dailyData.pnl}` : 'BE'}</div>}
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '14px', fontSize: '11px', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
-            {[['rgba(16,185,129,0.15)', 'var(--color-win)', 'Profit'], ['rgba(244,63,94,0.15)', 'var(--color-lose)', 'Loss'], ['rgba(99,102,241,0.15)', 'var(--color-be)', 'Break Even']].map(([bg, border, label]) => (
-              <span key={label} className="flex-align-center" style={{ gap: '5px' }}>
-                <span style={{ display: 'inline-block', width: '10px', height: '10px', background: bg, border: `1px solid ${border}`, borderRadius: '2px' }} />
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
+        <PnLCalendar trades={trades} />
 
         {/* Analisis Psikologi — 3 Tahap & Faktor Kesalahan */}
         <div className="glass-card">
