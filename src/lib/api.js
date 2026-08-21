@@ -84,6 +84,7 @@ function jurnalToDb(j, userId, premUrl, resUrl) {
     foto_premarket_url:   premUrl,
     foto_result_url:      resUrl,
     komentar_setup:       j.komentarSetup        ?? [],
+    konfirmasi_entry:     j.konfirmasiEntry      ?? [],
     // MT5 Auto-Sync Fields
     mt5_ticket:           j.mt5Ticket           ?? null,
     lot_size:             j.lotSize              ?? null,
@@ -121,6 +122,7 @@ function jurnalFromDb(row) {
     fotoPremarket:        row.foto_premarket_url,
     fotoResult:           row.foto_result_url,
     komentarSetup:        row.komentar_setup     ?? [],
+    konfirmasiEntry:      row.konfirmasi_entry   ?? [],
     // MT5 Auto-Sync Fields
     mt5Ticket:            row.mt5_ticket,
     lotSize:              row.lot_size          != null ? Number(row.lot_size)         : null,

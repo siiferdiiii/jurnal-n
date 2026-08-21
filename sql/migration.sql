@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS jurnal (
   foto_premarket_url    TEXT,
   foto_result_url       TEXT,
   komentar_setup        JSONB NOT NULL DEFAULT '[]',
+  konfirmasi_entry      JSONB NOT NULL DEFAULT '[]',
 
   -- MT5 Auto-Sync Fields:
   mt5_ticket            TEXT,
@@ -71,6 +72,7 @@ ALTER TABLE jurnal ADD COLUMN IF NOT EXISTS close_time TIMESTAMPTZ;
 ALTER TABLE jurnal ADD COLUMN IF NOT EXISTS sesi TEXT;
 ALTER TABLE jurnal ADD COLUMN IF NOT EXISTS is_auto_synced BOOLEAN DEFAULT false;
 ALTER TABLE jurnal ADD COLUMN IF NOT EXISTS komentar_setup JSONB DEFAULT '[]';
+ALTER TABLE jurnal ADD COLUMN IF NOT EXISTS konfirmasi_entry JSONB DEFAULT '[]';
 
 -- 3. Row Level Security — setiap user hanya lihat data miliknya
 ALTER TABLE metode ENABLE ROW LEVEL SECURITY;

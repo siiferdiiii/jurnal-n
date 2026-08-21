@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -16,10 +16,192 @@ import {
   MessageSquare,
   Send,
   User,
-  Check
+  Check,
+  Zap,
+  BarChart2
 } from 'lucide-react';
 import { getJurnal, getMetode, saveJurnal, deleteJurnal } from '../lib/api';
 import Lightbox from '../components/Lightbox';
+
+/* ─────────────────────────────────────────────────────────────
+   CONFLUENCE PERFORMANCE ANALYTICS WIDGET
+───────────────────────────────────────────────────────────── */
+export function ConfluenceAnalyticsWidget({ trades }) {
+  const [selectedCategory, setSelectedCategory] = useState('preset'); // 'preset' | 'all_tags'
+
+  const calculateStats = (subset) => {
+    const total = subset.length;
+    if (total === 0) return { total: 0, wins: 0, wr: '0.0', pnl: 0, avgRR: '0.00', profitFactor: '0.00' };
+    const wins = subset.filter(t => ['win', 'partial_tp', 'sl+'].includes(t.hasilTrade)).length;
+    const wr = ((wins / total) * 100).toFixed(1);
+    const pnl = subset.reduce((acc, t) => acc + (t.profitNominal || 0), 0);
+    const totalRR = subset.reduce((acc, t) => acc + (t.rrDiperoleh || 0), 0);
+    const avgRR = (totalRR / total).toFixed(2);
+
+    const grossProfit = subset.reduce((acc, t) => acc + (t.profitNominal > 0 ? t.profitNominal : 0), 0);
+    const grossLoss = subset.reduce((acc, t) => acc + (t.profitNominal < 0 ? Math.abs(t.profitNominal) : 0), 0);
+    const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss).toFixed(2) : grossProfit > 0 ? '∞' : '0.00';
+
+    return { total, wins, wr, pnl, avgRR, profitFactor };
+  };
+
+  const presets = useMemo(() => {
+    const withSMT = trades.filter(t => t.konfirmasiEntry?.some(k => k.toLowerCase().includes('smt')));
+    const withoutSMT = trades.filter(t => !t.konfirmasiEntry?.some(k => k.toLowerCase().includes('smt')));
+
+    const withCISD = trades.filter(t => t.konfirmasiEntry?.some(k => k.toLowerCase().includes('cisd')));
+    const withoutCISD = trades.filter(t => !t.konfirmasiEntry?.some(k => k.toLowerCase().includes('cisd')));
+
+    const multiTF = trades.filter(t => {
+      const ifvgTags = t.konfirmasiEntry?.filter(k => k.toLowerCase().includes('ifvg')) || [];
+      return ifvgTags.length > 1 || t.konfirmasiEntry?.some(k => k.toLowerCase().includes('m1') && (k.toLowerCase().includes('m2') || k.toLowerCase().includes('m3')));
+    });
+    const singleTF = trades.filter(t => {
+      const ifvgTags = t.konfirmasiEntry?.filter(k => k.toLowerCase().includes('ifvg')) || [];
+      return ifvgTags.length === 1 && !t.konfirmasiEntry?.some(k => k.toLowerCase().includes('m1') && (k.toLowerCase().includes('m2') || k.toLowerCase().includes('m3')));
+    });
+
+    return [
+      { name: 'SMT Divergence', with: calculateStats(withSMT), without: calculateStats(withoutSMT) },
+      { name: 'CISD Confirmation', with: calculateStats(withCISD), without: calculateStats(withoutCISD) },
+      { name: 'Multi-Timeframe IFVG (M1/M2/M3)', with: calculateStats(multiTF), without: calculateStats(singleTF), labelWithout: 'Single-TF IFVG' },
+    ];
+  }, [trades]);
+
+  const tagBreakdown = useMemo(() => {
+    const tagMap = {};
+    trades.forEach(t => {
+      if (t.konfirmasiEntry && Array.isArray(t.konfirmasiEntry)) {
+        t.konfirmasiEntry.forEach(tag => {
+          if (!tagMap[tag]) tagMap[tag] = [];
+          tagMap[tag].push(t);
+        });
+      }
+    });
+
+    return Object.keys(tagMap).map(tag => ({
+      tag,
+      stats: calculateStats(tagMap[tag])
+    })).sort((a, b) => b.stats.total - a.stats.total);
+  }, [trades]);
+
+  return (
+    <div className="glass-card mb-20" style={{ border: '1px solid rgba(16,185,129,0.2)', background: 'linear-gradient(135deg, rgba(16,185,129,0.04) 0%, rgba(13,14,21,0.9) 100%)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h3 style={{ fontSize: '15px', margin: 0, fontWeight: '700', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Zap size={18} style={{ color: 'var(--color-win)' }} /> Analisis Performa Konfirmasi Entry & Confluences
+          </h3>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+            Bandingkan Win Rate, PnL, dan Expectancy trade berdasarkan penggunaan konfirmasi spesifik.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => setSelectedCategory('preset')}
+            className={`btn ${selectedCategory === 'preset' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '5px 10px', fontSize: '12px' }}
+          >
+            Preset Utama (SMT, CISD, Multi-TF)
+          </button>
+          <button
+            onClick={() => setSelectedCategory('all_tags')}
+            className={`btn ${selectedCategory === 'all_tags' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '5px 10px', fontSize: '12px' }}
+          >
+            Semua Tag ({tagBreakdown.length})
+          </button>
+        </div>
+      </div>
+
+      {selectedCategory === 'preset' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+          {presets.map((p, idx) => (
+            <div key={idx} style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)', padding: '14px' }}>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--accent)', marginBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '6px' }}>
+                ⚡ {p.name}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {/* With */}
+                <div style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.2)', padding: '10px', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--color-win)', display: 'block', marginBottom: '4px' }}>
+                    ✓ DENGAN ({p.with.total})
+                  </span>
+                  <div style={{ fontSize: '17px', fontWeight: '800', color: '#fff' }}>
+                    {p.with.wr}% <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>WR</span>
+                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: p.with.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)', marginTop: '2px' }}>
+                    {p.with.pnl >= 0 ? `+$${p.with.pnl}` : `-$${Math.abs(p.with.pnl)}`}
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    PF: {p.with.profitFactor} • {p.with.avgRR}R
+                  </div>
+                </div>
+
+                {/* Without */}
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', padding: '10px', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                    ✕ {p.labelWithout || 'TANPA'} ({p.without.total})
+                  </span>
+                  <div style={{ fontSize: '17px', fontWeight: '800', color: '#fff' }}>
+                    {p.without.wr}% <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>WR</span>
+                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: p.without.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)', marginTop: '2px' }}>
+                    {p.without.pnl >= 0 ? `+$${p.without.pnl}` : `-$${Math.abs(p.without.pnl)}`}
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    PF: {p.without.profitFactor} • {p.without.avgRR}R
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          {tagBreakdown.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>
+              Belum ada konfirmasi entry yang dicatat pada jurnal trade kamu.
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', textTransform: 'uppercase', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  <th style={{ padding: '8px 12px', textAlign: 'left' }}>Nama Konfirmasi</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'center' }}>Total Trade</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'center' }}>Win Rate (%)</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'center' }}>Net PnL (USD)</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'center' }}>Profit Factor</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'center' }}>Avg R:R</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tagBreakdown.map(({ tag, stats }, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                    <td style={{ padding: '8px 12px', fontWeight: '600', color: '#fff' }}>
+                      <span style={{ padding: '2px 8px', borderRadius: '10px', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: 'var(--color-win)', fontSize: '11px' }}>
+                        ✓ {tag}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>{stats.total}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '700', color: Number(stats.wr) >= 50 ? 'var(--color-win)' : 'var(--color-lose)' }}>
+                      {stats.wr}%
+                    </td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '700', color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)' }}>
+                      {stats.pnl >= 0 ? `+$${stats.pnl}` : `-$${Math.abs(stats.pnl)}`}
+                    </td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>{stats.profitFactor}</td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>{stats.avgRR}R</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function formatCommentTime(ts) {
   if (!ts) return '';
@@ -88,6 +270,7 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
   const [filterPair, setFilterPair] = useState('');
   const [filterMethod, setFilterMethod] = useState('');
   const [filterResult, setFilterResult] = useState('');
+  const [filterKonfirmasi, setFilterKonfirmasi] = useState('');
   
   // Selected Trade Modal Detail
   const [selectedTrade, setSelectedTrade] = useState(null);
@@ -104,6 +287,8 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
   const [checklistTerpenuhi, setChecklistTerpenuhi] = useState([]);
   const [keyLevelDigunakan, setKeyLevelDigunakan] = useState('');
   const [triggerEntry, setTriggerEntry] = useState('');
+  const [konfirmasiEntry, setKonfirmasiEntry] = useState([]);
+  const [customKonfirmasiInput, setCustomKonfirmasiInput] = useState('');
   const [riskRewardRatio, setRiskRewardRatio] = useState(2);
   const [hasilTrade, setHasilTrade] = useState('win');
   const [profitNominal, setProfitNominal] = useState('');
@@ -139,6 +324,8 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
     setChecklistTerpenuhi([]);
     setKeyLevelDigunakan('');
     setTriggerEntry('');
+    setKonfirmasiEntry([]);
+    setCustomKonfirmasiInput('');
     setRiskRewardRatio(2);
     setHasilTrade('win');
     setProfitNominal('');
@@ -164,6 +351,7 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
     setChecklistTerpenuhi(trade.checklistTerpenuhi || []);
     setKeyLevelDigunakan(trade.keyLevelDigunakan || '');
     setTriggerEntry(trade.triggerEntry || '');
+    setKonfirmasiEntry(trade.konfirmasiEntry || []);
     setRiskRewardRatio(trade.riskRewardRatio || 2);
     setHasilTrade(trade.hasilTrade || 'win');
     setProfitNominal(trade.profitNominal != null ? trade.profitNominal : '');
@@ -190,6 +378,7 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
         setChecklistTerpenuhi([]);
         setKeyLevelDigunakan(selectedM.keyLevels?.[0] || '');
         setTriggerEntry(selectedM.triggers?.[0] || '');
+        setKonfirmasiEntry(selectedM.triggers || []);
       }
     }
   }, [metodeId, methods, editingTradeId]);
@@ -272,6 +461,7 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
       checklistTerpenuhi,
       keyLevelDigunakan,
       triggerEntry,
+      konfirmasiEntry,
       riskRewardRatio: parseFloat(riskRewardRatio) || 0,
       hasilTrade,
       profitNominal: parseFloat(profitNominal) || 0,
@@ -391,13 +581,17 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
     return found ? found.nama : 'Unknown Method';
   };
 
+  const allKonfirmasiTags = useMemo(() => {
+    return Array.from(new Set(journals.flatMap(j => j.konfirmasiEntry || [])));
+  }, [journals]);
+
   // Filtered Journals
   const filteredJournals = journals.filter(j => {
-    return (
-      (filterPair === '' || j.pair.toLowerCase().includes(filterPair.toLowerCase())) &&
-      (filterMethod === '' || j.metodeId === filterMethod) &&
-      (filterResult === '' || j.hasilTrade === filterResult)
-    );
+    const matchesPair = filterPair === '' || j.pair.toLowerCase().includes(filterPair.toLowerCase());
+    const matchesMethod = filterMethod === '' || j.metodeId === filterMethod;
+    const matchesResult = filterResult === '' || j.hasilTrade === filterResult;
+    const matchesKonfirmasi = filterKonfirmasi === '' || (j.konfirmasiEntry && j.konfirmasiEntry.includes(filterKonfirmasi));
+    return matchesPair && matchesMethod && matchesResult && matchesKonfirmasi;
   });
 
   const activeMethod = methods.find(m => m.id === metodeId);
@@ -488,7 +682,7 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Entry Trigger Terpilih</label>
+                    <label>Entry Trigger Utama</label>
                     <select value={triggerEntry} onChange={e => setTriggerEntry(e.target.value)}>
                       {activeMethod.triggers?.map((tr, i) => (
                         <option key={i} value={tr}>{tr}</option>
@@ -497,6 +691,92 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
                   </div>
                 </div>
               )}
+
+              {/* Konfirmasi Entry / Setup Confluences Multi-Select */}
+              <div className="form-group" style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.06)', padding: '16px', borderRadius: 'var(--radius-md)', margin: '16px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '13px', color: 'var(--accent)', fontWeight: '600', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Zap size={14} /> Konfirmasi Entry & Confluences (Multi-Select):
+                  </label>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{konfirmasiEntry.length} Terpilih</span>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', marginTop: 0 }}>
+                  Centang semua konfirmasi yang kamu miliki saat entry (misal: IFVG M1, M2, CISD, SMT Divergence, dll.) untuk analisis performa strategy.
+                </p>
+
+                {/* Available Trigger Chips */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                  {Array.from(new Set([
+                    ...(activeMethod?.triggers || []),
+                    'IFVG M1', 'IFVG M2', 'IFVG M3', 'IFVG M5', 'CISD', 'SMT', 'Liquidity Sweep', 'MSS', 'Order Block',
+                    ...konfirmasiEntry
+                  ])).map((tag) => {
+                    const isSelected = konfirmasiEntry.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setKonfirmasiEntry(konfirmasiEntry.filter(t => t !== tag));
+                          } else {
+                            setKonfirmasiEntry([...konfirmasiEntry, tag]);
+                          }
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          background: isSelected ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${isSelected ? 'var(--color-win)' : 'rgba(255,255,255,0.1)'}`,
+                          color: isSelected ? 'var(--color-win)' : 'var(--text-secondary)',
+                        }}
+                      >
+                        {isSelected ? '✓ ' : '+ '} {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Quick Custom Tag Input */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder="Tambah konfirmasi kustom lainnya (Enter)..."
+                    value={customKonfirmasiInput}
+                    onChange={e => setCustomKonfirmasiInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (customKonfirmasiInput.trim() && !konfirmasiEntry.includes(customKonfirmasiInput.trim())) {
+                          setKonfirmasiEntry([...konfirmasiEntry, customKonfirmasiInput.trim()]);
+                          setCustomKonfirmasiInput('');
+                        }
+                      }
+                    }}
+                    style={{ fontSize: '12px', padding: '6px 12px' }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      if (customKonfirmasiInput.trim() && !konfirmasiEntry.includes(customKonfirmasiInput.trim())) {
+                        setKonfirmasiEntry([...konfirmasiEntry, customKonfirmasiInput.trim()]);
+                        setCustomKonfirmasiInput('');
+                      }
+                    }}
+                    style={{ padding: '6px 14px', fontSize: '12px', flexShrink: 0 }}
+                  >
+                    + Tambah
+                  </button>
+                </div>
+              </div>
 
               {/* SOP Checklist Validation */}
               {activeMethod && activeMethod.sopChecklist && (
@@ -665,6 +945,9 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
       ) : (
         /* TABLE HISTORY LIST */
         <div>
+          {/* Confluence Analytics Widget */}
+          <ConfluenceAnalyticsWidget trades={journals} />
+
           {/* Filter Bar */}
           <div className="glass-card mb-20 flex-between" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', padding: '16px 24px' }}>
             <div className="flex-align-center gap-10" style={{ flex: 1, minWidth: '240px' }}>
@@ -678,13 +961,13 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
               />
             </div>
             
-            <div className="flex-align-center gap-20">
+            <div className="flex-align-center gap-20" style={{ flexWrap: 'wrap' }}>
               <div className="flex-align-center gap-10">
                 <Filter size={16} className="text-secondary" />
                 <select 
                   value={filterMethod} 
                   onChange={e => setFilterMethod(e.target.value)}
-                  style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', width: '180px' }}
+                  style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', width: '160px' }}
                 >
                   <option value="">Semua Metode</option>
                   {methods.map(m => (
@@ -695,9 +978,22 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
 
               <div className="flex-align-center gap-10">
                 <select 
+                  value={filterKonfirmasi} 
+                  onChange={e => setFilterKonfirmasi(e.target.value)}
+                  style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', width: '170px' }}
+                >
+                  <option value="">Semua Konfirmasi</option>
+                  {allKonfirmasiTags.map((tag, i) => (
+                    <option key={i} value={tag}>⚡ {tag}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex-align-center gap-10">
+                <select 
                   value={filterResult} 
                   onChange={e => setFilterResult(e.target.value)}
-                  style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', width: '150px' }}
+                  style={{ padding: '8px 12px', fontSize: '13px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', width: '140px' }}
                 >
                   <option value="">Semua Hasil</option>
                   <option value="win">Win (Full TP)</option>
@@ -764,7 +1060,21 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
                           {trade.arah}
                         </span>
                       </td>
-                      <td style={{ padding: '16px 20px', color: 'var(--text-secondary)' }}>{getMethodName(trade.metodeId)}</td>
+                      <td style={{ padding: '16px 20px', color: 'var(--text-secondary)' }}>
+                        <div>{getMethodName(trade.metodeId)}</div>
+                        {trade.konfirmasiEntry && trade.konfirmasiEntry.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                            {trade.konfirmasiEntry.slice(0, 3).map((tag, idx) => (
+                              <span key={idx} style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', color: 'var(--color-win)', border: '1px solid rgba(16,185,129,0.2)', fontWeight: '600' }}>
+                                {tag}
+                              </span>
+                            ))}
+                            {trade.konfirmasiEntry.length > 3 && (
+                              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>+{trade.konfirmasiEntry.length - 3}</span>
+                            )}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ padding: '16px 20px' }}>
                         <span className={`badge badge-${trade.hasilTrade}`}>
                           {trade.hasilTrade}
@@ -834,9 +1144,36 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
               </span>
             </div>
 
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
               Dibuat pada tanggal <strong>{selectedTrade.tanggal}</strong> • Metode: <strong>{getMethodName(selectedTrade.metodeId)}</strong>
             </p>
+
+            {/* Konfirmasi Entry Badges in Modal */}
+            {selectedTrade.konfirmasiEntry && selectedTrade.konfirmasiEntry.length > 0 && (
+              <div style={{ marginBottom: '20px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.05)', padding: '12px 16px', borderRadius: 'var(--radius-md)' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--accent)', display: 'block', marginBottom: '8px' }}>
+                  ⚡ Konfirmasi Entry & Confluences:
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {selectedTrade.konfirmasiEntry.map((tag, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        background: 'rgba(16,185,129,0.12)',
+                        border: '1px solid rgba(16,185,129,0.3)',
+                        color: 'var(--color-win)'
+                      }}
+                    >
+                      ✓ {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* MT5 Execution Card */}
             {(selectedTrade.isAutoSynced || selectedTrade.mt5Ticket) && (

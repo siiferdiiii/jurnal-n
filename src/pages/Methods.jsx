@@ -240,8 +240,33 @@ export default function Methods({ dbTrigger, onDataChange, userId }) {
               <ChipInput value={keyLevelInput} onChange={setKeyLevelInput} onAdd={addKeyLevel} onRemove={removeKeyLevel} list={keyLevelsList} placeholder="Contoh: Fibonacci 0.618, Daily FVG, OB" color={COLOR_CHIPS_KL} />
             </div>
             <div className="form-group">
-              <label>Daftar Entry Trigger (Pilihan)</label>
-              <ChipInput value={triggerInput} onChange={setTriggerInput} onAdd={addTrigger} onRemove={removeTrigger} list={triggersList} placeholder="Contoh: iFVG, MSS, CISD, Choch" color={COLOR_CHIPS_TR} />
+              <label>Daftar Entry Trigger & Konfirmasi (Pilihan)</label>
+              <ChipInput value={triggerInput} onChange={setTriggerInput} onAdd={addTrigger} onRemove={removeTrigger} list={triggersList} placeholder="Contoh: IFVG M1, CISD, SMT, MSS" color={COLOR_CHIPS_TR} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center', marginRight: '4px' }}>Rekomendasi preset:</span>
+                {['IFVG M1', 'IFVG M2', 'IFVG M3', 'CISD', 'SMT', 'Liquidity Sweep', 'MSS', 'Order Block'].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      if (!triggersList.includes(preset)) {
+                        setTriggersList([...triggersList, preset]);
+                      }
+                    }}
+                    style={{
+                      background: triggersList.includes(preset) ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${triggersList.includes(preset) ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                      color: triggersList.includes(preset) ? 'var(--color-win)' : 'var(--text-secondary)',
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    + {preset}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
