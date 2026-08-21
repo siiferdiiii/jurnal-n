@@ -12,6 +12,7 @@ import {
   Zap,
   UserCircle,
   Trophy,
+  BarChart3,
 } from 'lucide-react';
 
 import { onAuthStateChange, signOut } from './lib/auth';
@@ -31,6 +32,7 @@ const maskEmail = (email) => {
 import Auth        from './pages/Auth';
 import Dashboard   from './pages/Dashboard';
 import Journal     from './pages/Journal';
+import Analytics   from './pages/Analytics';
 import Methods     from './pages/Methods';
 import Gallery     from './pages/Gallery';
 import Profile     from './pages/Profile';
@@ -104,6 +106,7 @@ function App() {
     switch (currentTab) {
       case 'dashboard': return <Dashboard dbTrigger={dbTrigger} userId={userId} />;
       case 'jurnal':    return <Journal   dbTrigger={dbTrigger} onDataChange={triggerDataRefresh} userId={userId} />;
+      case 'analisis':  return <Analytics dbTrigger={dbTrigger} userId={userId} />;
       case 'metode':    return <Methods   dbTrigger={dbTrigger} onDataChange={triggerDataRefresh} userId={userId} />;
       case 'galeri':    return <Gallery   dbTrigger={dbTrigger} userId={userId} />;
       case 'profil':    return <Profile   session={session} onDataChange={triggerDataRefresh} />;
@@ -115,6 +118,7 @@ function App() {
   const navItems = [
     { id: 'dashboard',   icon: <LayoutDashboard size={18} className="nav-icon" />, full: 'Dashboard',         short: 'Beranda',    desktopOnly: false },
     { id: 'jurnal',      icon: <BookOpen        size={18} className="nav-icon" />, full: 'Catatan Jurnal',    short: 'Jurnal',     desktopOnly: false },
+    { id: 'analisis',    icon: <BarChart3       size={18} className="nav-icon" />, full: 'Analisis Strategy', short: 'Analisis',   desktopOnly: false },
     { id: 'metode',      icon: <CheckSquare     size={18} className="nav-icon" />, full: 'Manajemen Metode', short: 'Metode',     desktopOnly: false },
     { id: 'galeri',      icon: <ImageIcon       size={18} className="nav-icon" />, full: 'Galeri Chart',     short: 'Galeri',     desktopOnly: false },
     { id: 'profil',      icon: <UserCircle      size={18} className="nav-icon" />, full: 'Profil Saya',      short: 'Profil',     desktopOnly: false },

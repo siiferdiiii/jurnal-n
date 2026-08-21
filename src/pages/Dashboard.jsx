@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { getJurnal } from '../lib/api';
 import PnLCalendar from '../components/PnLCalendar';
-import { ConfluenceAnalyticsWidget } from './Journal';
 
 /* ─────────────────────────────────────────────
    SUB-COMPONENTS
@@ -632,11 +631,6 @@ export default function Dashboard({ dbTrigger, userId }) {
             <div className="kpi-details"><span>{label}</span><h3 style={{ color }}>{value}</h3></div>
           </div>
         ))}
-      </div>
-
-      {/* ── CONFLUENCE PERFORMANCE ANALYTICS WIDGET ── */}
-      <div style={{ marginTop: '24px' }}>
-        <ConfluenceAnalyticsWidget trades={trades} />
       </div>
 
       {/* ── ROW 1: Equity Curve + Donut ── */}
