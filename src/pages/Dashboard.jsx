@@ -16,7 +16,7 @@ import {
   ArrowDownRight,
   Sparkles
 } from 'lucide-react';
-import { getJurnal } from '../lib/api';
+import { getJurnal, isWinTrade, isLossTrade } from '../lib/api';
 import PnLCalendar from '../components/PnLCalendar';
 
 /* ─────────────────────────────────────────────
@@ -223,7 +223,7 @@ function PairPerformance({ trades }) {
     if (!t.pair) return;
     if (!pairMap[t.pair]) pairMap[t.pair] = { total: 0, wins: 0, pnl: 0 };
     pairMap[t.pair].total++;
-    if (['win', 'partial_tp', 'sl+'].includes(t.hasilTrade)) pairMap[t.pair].wins++;
+    if (isWinTrade(t.hasilTrade)) pairMap[t.pair].wins++;
     pairMap[t.pair].pnl += t.profitNominal || 0;
   });
 
@@ -276,7 +276,7 @@ function TradeTypeStats({ trades }) {
     const k = t.jenisTrade;
     if (types[k]) {
       types[k].total++;
-      if (['win', 'partial_tp', 'sl+'].includes(t.hasilTrade)) types[k].wins++;
+      if (isWinTrade(t.hasilTrade)) types[k].wins++;
       types[k].rr += t.rrDiperoleh || 0;
     }
   });
@@ -311,7 +311,7 @@ function AdvancedStats({ trades }) {
   let equity = 0, peak = 0, maxDD = 0;
 
   sorted.forEach(t => {
-    const isWin = ['win', 'partial_tp', 'sl+'].includes(t.hasilTrade);
+    const isWin = isWinTrade(t.hasilTrade);
     const pnl = t.profitNominal || 0;
 
     // Streaks
@@ -390,7 +390,7 @@ function PsychologyAnalyticsSection({ trades }) {
     };
 
     trades.forEach(t => {
-      const isWin = ['win', 'partial_tp', 'sl+'].includes(t.hasilTrade);
+      const isWin = isWinTrade(t.hasilTrade);
       const pnl = t.profitNominal || 0;
       const rr = t.rrDiperoleh || 0;
 
@@ -600,7 +600,7 @@ export default function Dashboard({ dbTrigger, userId }) {
 
   // KPI
   const totalTrades = trades.length;
-  const winTrades = trades.filter(t => ['win', 'partial_tp', 'sl+'].includes(t.hasilTrade)).length;
+  const winTrades = trades.filter(t => isWinTrade(t.hasilTrade)).length;
   const winRate = totalTrades > 0 ? ((winTrades / totalTrades) * 100).toFixed(1) : 0;
   const totalNetPnL = trades.reduce((acc, cur) => acc + (cur.profitNominal || 0), 0).toFixed(2);
   const cumulativeRR = trades.reduce((acc, cur) => acc + (cur.rrDiperoleh || 0), 0).toFixed(2);

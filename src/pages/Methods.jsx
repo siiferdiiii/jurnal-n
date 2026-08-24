@@ -13,7 +13,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { getMetode, saveMetode, deleteMetode, getJurnal } from '../lib/api';
+import { getMetode, saveMetode, deleteMetode, getJurnal, isWinTrade } from '../lib/api';
 
 // Reusable chip-input row component
 function ChipInput({ value, onChange, onAdd, onRemove, list, placeholder, color }) {
@@ -191,7 +191,7 @@ export default function Methods({ dbTrigger, onDataChange, userId }) {
   const getMethodStats = (metodeId) => {
     const methodTrades = trades.filter(t => t.metodeId === metodeId);
     const total = methodTrades.length;
-    const wins = methodTrades.filter(t => ['win', 'partial_tp', 'sl+'].includes(t.hasilTrade)).length;
+    const wins = methodTrades.filter(t => isWinTrade(t.hasilTrade)).length;
     const wr = total > 0 ? ((wins / total) * 100).toFixed(1) : 0;
     const totalRR = methodTrades.reduce((acc, cur) => acc + (cur.rrDiperoleh || 0), 0);
     const avgRR = total > 0 ? (totalRR / total).toFixed(2) : 0;

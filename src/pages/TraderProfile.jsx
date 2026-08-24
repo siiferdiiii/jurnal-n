@@ -25,6 +25,8 @@ import {
   addTraderComment,
   deleteTraderComment,
   getMetode,
+  isWinTrade,
+  isLossTrade,
 } from '../lib/api';
 import Lightbox from '../components/Lightbox';
 
@@ -133,8 +135,8 @@ export default function TraderProfile({ trader, session, onBack }) {
 
   // Compute stats from trades
   const total  = trades.length;
-  const wins   = trades.filter(t => t.hasilTrade === 'win').length;
-  const losses = trades.filter(t => t.hasilTrade === 'lose').length;
+  const wins   = trades.filter(t => isWinTrade(t.hasilTrade)).length;
+  const losses = trades.filter(t => isLossTrade(t.hasilTrade)).length;
   const totalPnl = trades.reduce((s, t) => s + (t.profitNominal || 0), 0);
   const avgRr  = total > 0 ? (trades.reduce((s, t) => s + (t.rrDiperoleh || 0), 0) / total).toFixed(2) : '0';
   const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0';

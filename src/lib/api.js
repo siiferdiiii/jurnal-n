@@ -48,13 +48,29 @@ export function calculateTradingSession(timeInput) {
 
   if (hour >= 13 && hour < 16) {
     return 'London - NY Overlap';
-  } else if (hour >= 8 && hour < 16) {
+  } else if (hour >= 7 && hour < 13) {
     return 'London';
-  } else if (hour >= 13 && hour < 21) {
+  } else if (hour >= 16 && hour < 22) {
     return 'New York';
   } else {
     return 'Asia';
   }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   WIN / LOSS HELPER FUNCTIONS
+───────────────────────────────────────────────────────────── */
+
+export function isWinTrade(hasil) {
+  if (!hasil) return false;
+  const val = String(hasil).toLowerCase().trim();
+  return ['win', 'partial_tp', 'sl+'].includes(val);
+}
+
+export function isLossTrade(hasil) {
+  if (!hasil) return false;
+  const val = String(hasil).toLowerCase().trim();
+  return ['lose', 'sl'].includes(val);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -350,7 +366,7 @@ export async function getPublicTraders() {
   return profiles.map((p) => {
     const ts = tradeMap[p.user_id] || [];
     const total = ts.length;
-    const wins  = ts.filter((t) => t.hasil_trade === 'win').length;
+    const wins  = ts.filter((t) => isWinTrade(t.hasil_trade)).length;
     const totalPnl = ts.reduce((s, t) => s + (Number(t.profit_nominal) || 0), 0);
     const totalRr  = ts.reduce((s, t) => s + (Number(t.rr_diperoleh) || 0), 0);
     const avgRr   = total > 0 ? +(totalRr / total).toFixed(2) : 0;

@@ -21,7 +21,7 @@ import {
   Check,
   HelpCircle
 } from 'lucide-react';
-import { getJurnal, getMetode } from '../lib/api';
+import { getJurnal, getMetode, isWinTrade, isLossTrade } from '../lib/api';
 
 /* ─────────────────────────────────────────────────────────────
    HELPER FUNCTIONS FOR STATS & RECOMMENDATIONS
@@ -31,8 +31,8 @@ function calculateStats(subset) {
   const total = subset.length;
   if (total === 0) return { total: 0, wins: 0, losses: 0, wr: '0.0', pnl: 0, avgRR: '0.00', profitFactor: '0.00', expectancy: '0.00' };
 
-  const wins = subset.filter(t => ['win', 'partial_tp', 'sl+'].includes(t.hasilTrade)).length;
-  const losses = subset.filter(t => ['lose', 'sl'].includes(t.hasilTrade)).length;
+  const wins = subset.filter(t => isWinTrade(t.hasilTrade)).length;
+  const losses = subset.filter(t => isLossTrade(t.hasilTrade)).length;
   const wr = ((wins / total) * 100).toFixed(1);
   
   const pnl = subset.reduce((acc, t) => acc + (t.profitNominal || 0), 0);
@@ -111,8 +111,8 @@ export default function Analytics({ dbTrigger, userId }) {
 
     const sorted = [...filteredTrades].sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
     sorted.forEach(t => {
-      const isWin = ['win', 'partial_tp', 'sl+'].includes(t.hasilTrade);
-      const isLose = ['lose', 'sl'].includes(t.hasilTrade);
+      const isWin = isWinTrade(t.hasilTrade);
+      const isLose = isLossTrade(t.hasilTrade);
       const pnl = t.profitNominal || 0;
 
       if (isWin) {

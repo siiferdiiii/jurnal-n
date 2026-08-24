@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { signOut } from '../lib/auth';
-import { getJurnal, getMyProfile, upsertProfile } from '../lib/api';
+import { getJurnal, getMyProfile, upsertProfile, isWinTrade, isLossTrade } from '../lib/api';
 
 function StatCard({ icon, label, value, sub, color = 'var(--accent)' }) {
   return (
@@ -129,8 +129,8 @@ export default function Profile({ session, onDataChange }) {
     getJurnal(userId)
       .then((trades) => {
         const total = trades.length;
-        const wins = trades.filter((t) => t.hasilTrade === 'win').length;
-        const losses = trades.filter((t) => t.hasilTrade === 'lose').length;
+        const wins = trades.filter((t) => isWinTrade(t.hasilTrade)).length;
+        const losses = trades.filter((t) => isLossTrade(t.hasilTrade)).length;
         const totalPnl = trades.reduce((s, t) => s + (t.profitNominal || 0), 0);
         const totalRr = trades.reduce((s, t) => s + (t.rrDiperoleh || 0), 0);
         const avgRr = total > 0 ? (totalRr / total).toFixed(2) : 0;
