@@ -429,25 +429,15 @@ export default function Analytics({ dbTrigger, userId }) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {hasActiveFilters && (
+            {hasActiveFilters ? (
               <span style={{ fontSize: '11px', color: '#60a5fa', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '12px', padding: '3px 10px' }}>
                 Filter Aktif: {filteredTrades.length}/{trades.length} Trade
               </span>
+            ) : (
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '3px 10px' }}>
+                Semua Trade ({trades.length})
+              </span>
             )}
-            <button 
-              onClick={() => setShowFilters(!showFilters)} 
-              className={`btn ${showFilters ? 'btn-primary' : 'btn-secondary'}`} 
-              style={{ padding: '5px 11px', fontSize: '11px', borderRadius: '7px', display: 'flex', alignItems: 'center', gap: '5px' }}
-              title="Toggle Filter Panel"
-            >
-              <Filter size={12} />
-              <span>{showFilters ? 'Tutup Filter' : 'Filter'}</span>
-              {hasActiveFilters && (
-                <span style={{ background: showFilters ? 'rgba(255,255,255,0.25)' : 'var(--accent)', color: '#fff', fontSize: '9px', fontWeight: '700', padding: '1px 5px', borderRadius: '8px' }}>
-                  {activeFilters.length}
-                </span>
-              )}
-            </button>
           </div>
         </div>
 
