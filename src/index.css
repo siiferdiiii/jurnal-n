@@ -413,17 +413,132 @@ body {
 .badge-sell { background: rgba(244, 63, 94, 0.15); color: var(--color-lose); border: 1px solid rgba(244, 63, 94, 0.2); }
 
 /* ─────────────────────────────────────────────────────────────
-   PNL CALENDAR COMPONENT (MATCHING SPECIFIED UI DESIGN)
+   PNL CALENDAR COMPONENT (ADAPTIVE THEME: WEB DEFAULT / SYSTEM PREFERENCE)
 ───────────────────────────────────────────────────────────── */
 .pnl-summary-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  /* Default: Follow Website Dark Theme & Glassmorphism */
+  --cal-bg: var(--panel-bg, rgba(18, 20, 29, 0.75));
+  --cal-border: var(--panel-border, rgba(255, 255, 255, 0.08));
+  --cal-border-hover: var(--panel-border-hover, rgba(255, 255, 255, 0.18));
+  --cal-text-title: #ffffff;
+  --cal-text-main: var(--text-primary, #f3f4f6);
+  --cal-text-muted: var(--text-secondary, #9ca3af);
+  --cal-text-subtle: rgba(255, 255, 255, 0.28);
+  --cal-btn-bg: rgba(255, 255, 255, 0.05);
+  --cal-btn-border: rgba(255, 255, 255, 0.1);
+  --cal-btn-hover-bg: rgba(255, 255, 255, 0.1);
+  --cal-btn-hover-border: rgba(255, 255, 255, 0.2);
+  --cal-cell-bg: rgba(255, 255, 255, 0.02);
+  --cal-cell-border: rgba(255, 255, 255, 0.05);
+  --cal-cell-trade-bg: rgba(255, 255, 255, 0.035);
+  --cal-cell-trade-border: rgba(255, 255, 255, 0.08);
+  --cal-today-bg: rgba(99, 102, 241, 0.14);
+  --cal-today-border: rgba(99, 102, 241, 0.4);
+  --cal-card-sub-bg: rgba(255, 255, 255, 0.025);
+  --cal-card-sub-border: rgba(255, 255, 255, 0.06);
+  --cal-divider: rgba(255, 255, 255, 0.12);
+  --cal-pnl-green: var(--color-win, #10b981);
+  --cal-pnl-red: var(--color-lose, #f43f5e);
+  --cal-shadow: var(--shadow-main, 0 10px 30px -10px rgba(0, 0, 0, 0.5));
+  --cal-backdrop: blur(14px);
+
+  background: var(--cal-bg);
+  border: 1px solid var(--cal-border);
   border-radius: 16px;
   padding: 24px 28px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  backdrop-filter: var(--cal-backdrop);
+  box-shadow: var(--cal-shadow);
   font-family: var(--font-sans, system-ui, sans-serif);
-  color: #111827;
+  color: var(--cal-text-main);
   width: 100%;
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+/* Light Mode: when system preferences set to light */
+@media (prefers-color-scheme: light) {
+  .pnl-summary-card {
+    --cal-bg: #ffffff;
+    --cal-border: #e5e7eb;
+    --cal-border-hover: #d1d5db;
+    --cal-text-title: #111827;
+    --cal-text-main: #1f2937;
+    --cal-text-muted: #6b7280;
+    --cal-text-subtle: #cbd5e1;
+    --cal-btn-bg: #ffffff;
+    --cal-btn-border: #e5e7eb;
+    --cal-btn-hover-bg: #f9fafb;
+    --cal-btn-hover-border: #d1d5db;
+    --cal-cell-bg: #ffffff;
+    --cal-cell-border: #f1f5f9;
+    --cal-cell-trade-bg: #ffffff;
+    --cal-cell-trade-border: #f1f5f9;
+    --cal-today-bg: #e8edf2;
+    --cal-today-border: #cbd5e1;
+    --cal-card-sub-bg: #ffffff;
+    --cal-card-sub-border: #f1f5f9;
+    --cal-divider: #e5e7eb;
+    --cal-pnl-green: #16a34a;
+    --cal-pnl-red: #dc2626;
+    --cal-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --cal-backdrop: none;
+  }
+}
+
+/* Explicit class-level overrides if theme classes are used */
+[data-theme="light"] .pnl-summary-card,
+.theme-light .pnl-summary-card {
+  --cal-bg: #ffffff;
+  --cal-border: #e5e7eb;
+  --cal-border-hover: #d1d5db;
+  --cal-text-title: #111827;
+  --cal-text-main: #1f2937;
+  --cal-text-muted: #6b7280;
+  --cal-text-subtle: #cbd5e1;
+  --cal-btn-bg: #ffffff;
+  --cal-btn-border: #e5e7eb;
+  --cal-btn-hover-bg: #f9fafb;
+  --cal-btn-hover-border: #d1d5db;
+  --cal-cell-bg: #ffffff;
+  --cal-cell-border: #f1f5f9;
+  --cal-cell-trade-bg: #ffffff;
+  --cal-cell-trade-border: #f1f5f9;
+  --cal-today-bg: #e8edf2;
+  --cal-today-border: #cbd5e1;
+  --cal-card-sub-bg: #ffffff;
+  --cal-card-sub-border: #f1f5f9;
+  --cal-divider: #e5e7eb;
+  --cal-pnl-green: #16a34a;
+  --cal-pnl-red: #dc2626;
+  --cal-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --cal-backdrop: none;
+}
+
+[data-theme="dark"] .pnl-summary-card,
+.theme-dark .pnl-summary-card {
+  --cal-bg: var(--panel-bg, rgba(18, 20, 29, 0.75));
+  --cal-border: var(--panel-border, rgba(255, 255, 255, 0.08));
+  --cal-border-hover: var(--panel-border-hover, rgba(255, 255, 255, 0.18));
+  --cal-text-title: #ffffff;
+  --cal-text-main: var(--text-primary, #f3f4f6);
+  --cal-text-muted: var(--text-secondary, #9ca3af);
+  --cal-text-subtle: rgba(255, 255, 255, 0.28);
+  --cal-btn-bg: rgba(255, 255, 255, 0.05);
+  --cal-btn-border: rgba(255, 255, 255, 0.1);
+  --cal-btn-hover-bg: rgba(255, 255, 255, 0.1);
+  --cal-btn-hover-border: rgba(255, 255, 255, 0.2);
+  --cal-cell-bg: rgba(255, 255, 255, 0.02);
+  --cal-cell-border: rgba(255, 255, 255, 0.05);
+  --cal-cell-trade-bg: rgba(255, 255, 255, 0.035);
+  --cal-cell-trade-border: rgba(255, 255, 255, 0.08);
+  --cal-today-bg: rgba(99, 102, 241, 0.14);
+  --cal-today-border: rgba(99, 102, 241, 0.4);
+  --cal-card-sub-bg: rgba(255, 255, 255, 0.025);
+  --cal-card-sub-border: rgba(255, 255, 255, 0.06);
+  --cal-divider: rgba(255, 255, 255, 0.12);
+  --cal-pnl-green: var(--color-win, #10b981);
+  --cal-pnl-red: var(--color-lose, #f43f5e);
+  --cal-shadow: var(--shadow-main, 0 10px 30px -10px rgba(0, 0, 0, 0.5));
+  --cal-backdrop: blur(14px);
 }
 
 .pnl-summary-header {
@@ -436,7 +551,7 @@ body {
 .pnl-summary-title {
   font-size: 19px;
   font-weight: 700;
-  color: #111827;
+  color: var(--cal-text-title);
   margin: 0;
   letter-spacing: -0.2px;
 }
@@ -445,21 +560,21 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--cal-btn-bg);
+  border: 1px solid var(--cal-btn-border);
   border-radius: 8px;
   padding: 7px 15px;
   font-size: 13px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--cal-text-main);
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   transition: all 0.15s ease;
 }
 
 .pnl-share-button:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
+  background: var(--cal-btn-hover-bg);
+  border-color: var(--cal-btn-hover-border);
 }
 
 .pnl-summary-controls {
@@ -478,12 +593,12 @@ body {
 }
 
 .pnl-ctrl-btn {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--cal-btn-bg);
+  border: 1px solid var(--cal-btn-border);
   border-radius: 8px;
-  color: #374151;
+  color: var(--cal-text-main);
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
@@ -491,8 +606,8 @@ body {
 }
 
 .pnl-ctrl-btn:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
+  background: var(--cal-btn-hover-bg);
+  border-color: var(--cal-btn-hover-border);
 }
 
 .pnl-ctrl-square {
@@ -512,13 +627,13 @@ body {
 .pnl-current-month-label {
   font-size: 17px;
   font-weight: 700;
-  color: #111827;
+  color: var(--cal-text-title);
   margin: 0 6px;
 }
 
 .pnl-stats-pill {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--cal-btn-bg);
+  border: 1px solid var(--cal-btn-border);
   border-radius: 8px;
   height: 36px;
   padding: 0 14px;
@@ -526,11 +641,11 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .pnl-pill-label {
-  color: #6b7280;
+  color: var(--cal-text-muted);
   font-weight: 500;
 }
 
@@ -542,12 +657,12 @@ body {
 .pnl-pill-divider {
   width: 1px;
   height: 16px;
-  background: #e5e7eb;
+  background: var(--cal-divider);
   margin: 0 6px;
 }
 
 .pnl-pill-days {
-  color: #111827;
+  color: var(--cal-text-title);
 }
 
 .pnl-main-layout {
@@ -577,7 +692,7 @@ body {
   text-align: center;
   font-size: 13px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--cal-text-muted);
 }
 
 .pnl-days-grid {
@@ -593,8 +708,8 @@ body {
 }
 
 .pnl-date-cell {
-  background: #ffffff;
-  border: 1px solid #f1f5f9;
+  background: var(--cal-cell-bg);
+  border: 1px solid var(--cal-cell-border);
   border-radius: 12px;
   min-height: 88px;
   padding: 10px 12px;
@@ -607,13 +722,18 @@ body {
 }
 
 .pnl-date-cell:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  border-color: var(--cal-border-hover);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.pnl-date-cell.has-trades {
+  background: var(--cal-cell-trade-bg);
+  border-color: var(--cal-cell-trade-border);
 }
 
 .pnl-date-cell.is-today-active {
-  background: #e8edf2;
-  border-color: #cbd5e1;
+  background: var(--cal-today-bg);
+  border-color: var(--cal-today-border);
 }
 
 .pnl-cell-number {
@@ -623,17 +743,17 @@ body {
 }
 
 .number-muted {
-  color: #cbd5e1;
+  color: var(--cal-text-subtle);
 }
 
 .number-dark {
-  color: #111827;
+  color: var(--cal-text-title);
   font-weight: 600;
   font-size: 16px;
 }
 
 .number-today {
-  color: #0f172a;
+  color: var(--cal-text-title);
   font-weight: 700;
 }
 
@@ -650,12 +770,12 @@ body {
   gap: 3px;
   font-size: 12px;
   font-weight: 500;
-  color: #374151;
+  color: var(--cal-text-main);
   margin-bottom: 1px;
 }
 
 .pnl-cell-arrow-icon {
-  color: #4b5563;
+  color: var(--cal-text-muted);
 }
 
 .pnl-cell-pnl-val {
@@ -665,11 +785,11 @@ body {
 }
 
 .pnl-green {
-  color: #16a34a !important;
+  color: var(--cal-pnl-green) !important;
 }
 
 .pnl-red {
-  color: #dc2626 !important;
+  color: var(--cal-pnl-red) !important;
 }
 
 .pnl-weekly-section {
@@ -679,7 +799,7 @@ body {
 .pnl-weekly-header-title {
   font-size: 13px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--cal-text-muted);
   margin-bottom: 12px;
 }
 
@@ -690,15 +810,15 @@ body {
 }
 
 .pnl-weekly-card {
-  background: #ffffff;
-  border: 1px solid #f1f5f9;
+  background: var(--cal-card-sub-bg);
+  border: 1px solid var(--cal-card-sub-border);
   border-radius: 12px;
   padding: 13px 16px;
   transition: border-color 0.15s ease;
 }
 
 .pnl-weekly-card:hover {
-  border-color: #cbd5e1;
+  border-color: var(--cal-border-hover);
 }
 
 .pnl-weekly-card-top {
@@ -710,13 +830,13 @@ body {
 .pnl-weekly-name {
   font-size: 14px;
   font-weight: 600;
-  color: #111827;
+  color: var(--cal-text-title);
 }
 
 .pnl-weekly-range {
   font-size: 12px;
   font-weight: 400;
-  color: #6b7280;
+  color: var(--cal-text-muted);
 }
 
 .pnl-weekly-card-bottom {
@@ -734,7 +854,7 @@ body {
 }
 
 .pnl-weekly-stat-lbl {
-  color: #6b7280;
+  color: var(--cal-text-muted);
   font-weight: 500;
   font-size: 13px;
 }
@@ -745,11 +865,11 @@ body {
 }
 
 .pnl-days-count {
-  color: #111827;
+  color: var(--cal-text-title);
 }
 
 .pnl-weekly-no-trades {
-  color: #6b7280;
+  color: var(--cal-text-muted);
   font-size: 13px;
   font-weight: 400;
 }
