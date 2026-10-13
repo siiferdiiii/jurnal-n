@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -18,7 +18,10 @@ import {
   User,
   Check,
   Zap,
-  BarChart2
+  Clipboard,
+  UploadCloud,
+  Maximize2,
+  RefreshCw
 } from 'lucide-react';
 import { getJurnal, getMetode, saveJurnal, deleteJurnal } from '../lib/api';
 import Lightbox from '../components/Lightbox';
@@ -35,11 +38,44 @@ function formatCommentTime(ts) {
   });
 }
 
-// Helper kompresi gambar
-function compressImage(file) {
+// Helper kompresi gambar (mendukung File, Blob, Data URL, dan Image URL)
+function compressImage(fileOrBlobOrDataUrl) {
   return new Promise((resolve, reject) => {
+    if (typeof fileOrBlobOrDataUrl === 'string') {
+      if (fileOrBlobOrDataUrl.startsWith('data:image/')) {
+        const img = new Image();
+        img.src = fileOrBlobOrDataUrl;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_DIMENSION = 1920;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIMENSION) / width);
+              width = MAX_DIMENSION;
+            } else {
+              width = Math.round((width * MAX_DIMENSION) / height);
+              height = MAX_DIMENSION;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.90));
+        };
+        img.onerror = error => reject(error);
+        return;
+      }
+      resolve(fileOrBlobOrDataUrl);
+      return;
+    }
+
     const reader = new FileReader();
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(fileOrBlobOrDataUrl);
     reader.onload = (event) => {
       const img = new Image();
       img.src = event.target.result;
@@ -68,6 +104,7 @@ function compressImage(file) {
         const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
         resolve(dataUrl);
       };
+      img.onerror = error => reject(error);
     };
     reader.onerror = error => reject(error);
   });
@@ -120,11 +157,18 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
   const [faktorKesalahan, setFaktorKesalahan] = useState([]);
   
   const [catatanHariIni, setCatatanHariIni] = useState('');
-  const [premarketFile, setPremarketFile] = useState(null);
-  const [resultFile, setResultFile] = useState(null);
   const [premarketPreview, setPremarketPreview] = useState('');
   const [resultPreview, setResultPreview] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // States & Refs for Ctrl+V image paste feature
+  const [activePasteTarget, setActivePasteTarget] = useState('premarket'); // 'premarket' | 'result'
+  const [isProcessingImage, setIsProcessingImage] = useState({ premarket: false, result: false });
+  const [isDragging, setIsDragging] = useState({ premarket: false, result: false });
+  const [toastMessage, setToastMessage] = useState(null);
+  const toastTimeoutRef = useRef(null);
+  const premarketInputRef = useRef(null);
+  const resultInputRef = useRef(null);
 
   // Load methods & journals
   useEffect(() => {
@@ -155,10 +199,11 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
     setPsikologiSetelah('Tenang');
     setFaktorKesalahan([]);
     setCatatanHariIni('');
-    setPremarketFile(null);
-    setResultFile(null);
     setPremarketPreview('');
     setResultPreview('');
+    setActivePasteTarget('premarket');
+    if (premarketInputRef.current) premarketInputRef.current.value = '';
+    if (resultInputRef.current) resultInputRef.current.value = '';
   };
 
   const handleEditTrade = (trade) => {
@@ -183,8 +228,7 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
     setCatatanHariIni(trade.catatanHariIni || '');
     setPremarketPreview(trade.fotoPremarket || '');
     setResultPreview(trade.fotoResult || '');
-    setPremarketFile(null);
-    setResultFile(null);
+    setActivePasteTarget(trade.fotoPremarket && !trade.fotoResult ? 'result' : 'premarket');
 
     if (selectedTrade) setSelectedTrade(null);
     setActiveSubTab('add');
@@ -239,24 +283,186 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
     }
   };
 
+  const showToast = (message) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToastMessage(message);
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
+  };
+
+  const processImage = async (fileOrBlob, targetType) => {
+    if (!fileOrBlob) return;
+    setIsProcessingImage(prev => ({ ...prev, [targetType]: true }));
+    try {
+      const compressedBase64 = await compressImage(fileOrBlob);
+      if (targetType === 'premarket') {
+        setPremarketPreview(compressedBase64);
+        showToast('✓ Gambar Premarket Chart berhasil ditempel!');
+        if (!resultPreview) {
+          setActivePasteTarget('result');
+        }
+      } else {
+        setResultPreview(compressedBase64);
+        showToast('✓ Gambar Result Chart berhasil ditempel!');
+      }
+    } catch (err) {
+      console.error('Image processing failed:', err);
+      alert('Gagal memproses gambar. Pastikan format gambar valid.');
+    } finally {
+      setIsProcessingImage(prev => ({ ...prev, [targetType]: false }));
+    }
+  };
+
+  const extractImageFromClipboard = (clipboardData) => {
+    if (!clipboardData) return null;
+
+    if (clipboardData.items) {
+      for (let i = 0; i < clipboardData.items.length; i++) {
+        const item = clipboardData.items[i];
+        if (item.type && item.type.startsWith('image/')) {
+          const blob = item.getAsFile();
+          if (blob) return blob;
+        }
+      }
+    }
+
+    if (clipboardData.files && clipboardData.files.length > 0) {
+      for (let i = 0; i < clipboardData.files.length; i++) {
+        const file = clipboardData.files[i];
+        if (file.type && file.type.startsWith('image/')) {
+          return file;
+        }
+      }
+    }
+
+    try {
+      const text = clipboardData.getData('text')?.trim();
+      if (text && (text.startsWith('data:image/') || /^https?:\/\/.*\.(png|jpg|jpeg|webp|gif)($|\?)/i.test(text))) {
+        return text;
+      }
+    } catch {
+      // ignore
+    }
+
+    return null;
+  };
+
+  const handleDropzonePaste = async (e, type) => {
+    const img = extractImageFromClipboard(e.clipboardData);
+    if (img) {
+      e.preventDefault();
+      e.stopPropagation();
+      await processImage(img, type);
+    }
+  };
+
+  const handleDragOver = (e, type) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(prev => ({ ...prev, [type]: true }));
+  };
+
+  const handleDragLeave = (e, type) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(prev => ({ ...prev, [type]: false }));
+  };
+
+  const handleDrop = async (e, type) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(prev => ({ ...prev, [type]: false }));
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        await processImage(file, type);
+      } else {
+        alert('File harus berupa gambar (PNG, JPG, WebP).');
+      }
+    }
+  };
+
+  const handlePasteFromClipboardBtn = async (type) => {
+    try {
+      if (!navigator.clipboard?.read) {
+        alert('Browser Anda belum mendukung akses clipboard langsung. Silakan klik kotak ini lalu tekan Ctrl+V pada keyboard.');
+        return;
+      }
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find(t => t.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          await processImage(blob, type);
+          return;
+        }
+      }
+      
+      if (navigator.clipboard.readText) {
+        const text = (await navigator.clipboard.readText())?.trim();
+        if (text && (text.startsWith('data:image/') || /^https?:\/\/.*\.(png|jpg|jpeg|webp|gif)($|\?)/i.test(text))) {
+          await processImage(text, type);
+          return;
+        }
+      }
+
+      alert('Tidak ada gambar di clipboard. Silakan salin gambar/screenshot terlebih dahulu (misal: Win+Shift+S atau Copy Image di TradingView), lalu tekan Ctrl+V.');
+    } catch (err) {
+      console.warn('Clipboard read error:', err);
+      alert('Izin clipboard belum diberikan browser. Anda tetap dapat langsung menekan Ctrl+V pada keyboard!');
+    }
+  };
+
+  const handleRemoveImage = (type) => {
+    if (type === 'premarket') {
+      setPremarketPreview('');
+      if (premarketInputRef.current) premarketInputRef.current.value = '';
+    } else {
+      setResultPreview('');
+      if (resultInputRef.current) resultInputRef.current.value = '';
+    }
+    showToast(`Gambar ${type === 'premarket' ? 'Premarket' : 'Result'} dihapus.`);
+  };
+
   const handleFileChange = async (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    try {
-      const compressedBase64 = await compressImage(file);
-      if (type === 'premarket') {
-        setPremarketFile(file);
-        setPremarketPreview(compressedBase64);
-      } else {
-        setResultFile(file);
-        setResultPreview(compressedBase64);
-      }
-    } catch (err) {
-      console.error('File compression failed:', err);
-      alert('Gagal memproses berkas gambar, silakan coba berkas lain.');
-    }
+    await processImage(file, type);
   };
+
+  // Global window paste listener for Ctrl+V
+  useEffect(() => {
+    const handleGlobalPaste = async (e) => {
+      const img = extractImageFromClipboard(e.clipboardData);
+      if (!img) {
+        return; // Text paste, let browser handle normally
+      }
+
+      // Clipboard has an image! Prevent browser default
+      e.preventDefault();
+
+      if (activeSubTab !== 'add') {
+        setActiveSubTab('add');
+        showToast('✓ Form trade dibuka & screenshot ditempel ke Premarket!');
+        await processImage(img, 'premarket');
+        setActivePasteTarget('result');
+        return;
+      }
+
+      let target = activePasteTarget || 'premarket';
+      if (!activePasteTarget) {
+        if (!premarketPreview) target = 'premarket';
+        else if (!resultPreview) target = 'result';
+      }
+
+      await processImage(img, target);
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, [activeSubTab, activePasteTarget, premarketPreview, resultPreview]);
 
   const handleSaveTrade = async (e) => {
     e.preventDefault();
@@ -725,26 +931,285 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
                 <ImageIcon size={16} /> Dokumentasi Visual & Catatan
               </h3>
 
-              {/* Upload Dropzone */}
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Premarket Chart (Analisis)</label>
-                  <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'premarket')} />
-                  {premarketPreview && (
-                    <div style={{ marginTop: '8px', width: '100%', height: '100px', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--panel-border)' }}>
-                      <img src={premarketPreview} alt="Premarket Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                  )}
+              {/* Upload Dropzones with Ctrl+V, Drag & Drop, and File Browse */}
+              <div className="chart-paste-section">
+                {/* Info banner */}
+                <div className="chart-paste-banner">
+                  <div className="chart-paste-banner-left">
+                    <Clipboard size={18} style={{ color: 'var(--accent)' }} />
+                    <span>
+                      Fitur Cepat: Tekan <kbd className="shortcut-badge">Ctrl</kbd> + <kbd className="shortcut-badge">V</kbd> di mana saja untuk menempelkan chart screenshot, drag & drop, atau klik kotak di bawah.
+                    </span>
+                  </div>
+                  <div className="chart-paste-banner-right">
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Target Ctrl+V:</span>
+                    <button
+                      type="button"
+                      className={`target-badge ${activePasteTarget === 'premarket' ? 'active' : 'inactive'}`}
+                      onClick={() => setActivePasteTarget('premarket')}
+                    >
+                      {activePasteTarget === 'premarket' && <span className="target-pulse-dot" />}
+                      Premarket
+                    </button>
+                    <button
+                      type="button"
+                      className={`target-badge ${activePasteTarget === 'result' ? 'active' : 'inactive'}`}
+                      onClick={() => setActivePasteTarget('result')}
+                    >
+                      {activePasteTarget === 'result' && <span className="target-pulse-dot" />}
+                      Result
+                    </button>
+                  </div>
                 </div>
 
-                <div className="form-group">
-                  <label>Result Chart (Exit Posisi)</label>
-                  <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'result')} />
-                  {resultPreview && (
-                    <div style={{ marginTop: '8px', width: '100%', height: '100px', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--panel-border)' }}>
-                      <img src={resultPreview} alt="Result Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div className="chart-paste-grid">
+                  {/* Premarket Chart Card */}
+                  <div 
+                    className={`chart-paste-card ${activePasteTarget === 'premarket' ? 'active-target' : ''}`}
+                    onClick={() => setActivePasteTarget('premarket')}
+                    tabIndex={0}
+                    onPaste={(e) => handleDropzonePaste(e, 'premarket')}
+                  >
+                    <div className="chart-paste-card-header">
+                      <div className="chart-paste-card-title">
+                        <ImageIcon size={15} style={{ color: 'var(--accent)' }} />
+                        <span>Premarket Chart (Setup Analisis)</span>
+                      </div>
+                      <span className={`target-badge ${activePasteTarget === 'premarket' ? 'active' : 'inactive'}`}>
+                        {activePasteTarget === 'premarket' ? (
+                          <>
+                            <span className="target-pulse-dot" />
+                            Target Ctrl+V
+                          </>
+                        ) : (
+                          'Pilih Target'
+                        )}
+                      </span>
                     </div>
-                  )}
+
+                    {premarketPreview ? (
+                      <div className="chart-preview-wrapper">
+                        <img src={premarketPreview} alt="Premarket Preview" className="chart-preview-img" />
+                        
+                        <div className="chart-preview-toolbar">
+                          <button
+                            type="button"
+                            className="chart-preview-btn"
+                            title="Perbesar Gambar"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveLightbox({ src: premarketPreview, caption: 'Premarket Chart Setup' });
+                            }}
+                          >
+                            <Maximize2 size={13} /> Perbesar
+                          </button>
+                          <button
+                            type="button"
+                            className="chart-preview-btn"
+                            title="Ganti Gambar (Ctrl+V atau pilih file)"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              premarketInputRef.current?.click();
+                            }}
+                          >
+                            <RefreshCw size={13} /> Ganti
+                          </button>
+                          <button
+                            type="button"
+                            className="chart-preview-btn danger"
+                            title="Hapus Gambar"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveImage('premarket');
+                            }}
+                          >
+                            <Trash2 size={13} /> Hapus
+                          </button>
+                        </div>
+
+                        <div className="chart-preview-bottom-bar">
+                          <span>✓ Siap disimpan</span>
+                          <span>Tekan Ctrl+V untuk ganti</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div 
+                        className={`chart-paste-dropzone ${isDragging.premarket ? 'is-dragging' : ''}`}
+                        onDragOver={(e) => handleDragOver(e, 'premarket')}
+                        onDragLeave={(e) => handleDragLeave(e, 'premarket')}
+                        onDrop={(e) => handleDrop(e, 'premarket')}
+                        onClick={() => setActivePasteTarget('premarket')}
+                      >
+                        {isProcessingImage.premarket ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <div className="spinner" style={{ width: '24px', height: '24px' }} />
+                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Mengompres & memproses gambar...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent)' }}>
+                              <Clipboard size={24} />
+                            </div>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>
+                              Tekan <kbd className="shortcut-badge">Ctrl</kbd> + <kbd className="shortcut-badge">V</kbd> untuk Paste
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                              atau drag & drop screenshot chart ke sini
+                            </div>
+
+                            <div className="chart-dropzone-actions" onClick={e => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                className="btn-dropzone-action primary"
+                                onClick={() => handlePasteFromClipboardBtn('premarket')}
+                              >
+                                <Clipboard size={13} /> Paste Clipboard
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-dropzone-action"
+                                onClick={() => premarketInputRef.current?.click()}
+                              >
+                                <UploadCloud size={13} /> Pilih File
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    <input 
+                      ref={premarketInputRef}
+                      type="file" 
+                      accept="image/*" 
+                      style={{ display: 'none' }}
+                      onChange={e => handleFileChange(e, 'premarket')} 
+                    />
+                  </div>
+
+                  {/* Result Chart Card */}
+                  <div 
+                    className={`chart-paste-card ${activePasteTarget === 'result' ? 'active-target' : ''}`}
+                    onClick={() => setActivePasteTarget('result')}
+                    tabIndex={0}
+                    onPaste={(e) => handleDropzonePaste(e, 'result')}
+                  >
+                    <div className="chart-paste-card-header">
+                      <div className="chart-paste-card-title">
+                        <ImageIcon size={15} style={{ color: 'var(--accent-secondary)' }} />
+                        <span>Result Chart (Exit Posisi)</span>
+                      </div>
+                      <span className={`target-badge ${activePasteTarget === 'result' ? 'active' : 'inactive'}`}>
+                        {activePasteTarget === 'result' ? (
+                          <>
+                            <span className="target-pulse-dot" />
+                            Target Ctrl+V
+                          </>
+                        ) : (
+                          'Pilih Target'
+                        )}
+                      </span>
+                    </div>
+
+                    {resultPreview ? (
+                      <div className="chart-preview-wrapper">
+                        <img src={resultPreview} alt="Result Preview" className="chart-preview-img" />
+                        
+                        <div className="chart-preview-toolbar">
+                          <button
+                            type="button"
+                            className="chart-preview-btn"
+                            title="Perbesar Gambar"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveLightbox({ src: resultPreview, caption: 'Result Chart Exit' });
+                            }}
+                          >
+                            <Maximize2 size={13} /> Perbesar
+                          </button>
+                          <button
+                            type="button"
+                            className="chart-preview-btn"
+                            title="Ganti Gambar (Ctrl+V atau pilih file)"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              resultInputRef.current?.click();
+                            }}
+                          >
+                            <RefreshCw size={13} /> Ganti
+                          </button>
+                          <button
+                            type="button"
+                            className="chart-preview-btn danger"
+                            title="Hapus Gambar"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveImage('result');
+                            }}
+                          >
+                            <Trash2 size={13} /> Hapus
+                          </button>
+                        </div>
+
+                        <div className="chart-preview-bottom-bar">
+                          <span>✓ Siap disimpan</span>
+                          <span>Tekan Ctrl+V untuk ganti</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div 
+                        className={`chart-paste-dropzone ${isDragging.result ? 'is-dragging' : ''}`}
+                        onDragOver={(e) => handleDragOver(e, 'result')}
+                        onDragLeave={(e) => handleDragLeave(e, 'result')}
+                        onDrop={(e) => handleDrop(e, 'result')}
+                        onClick={() => setActivePasteTarget('result')}
+                      >
+                        {isProcessingImage.result ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <div className="spinner" style={{ width: '24px', height: '24px' }} />
+                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Mengompres & memproses gambar...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-secondary)' }}>
+                              <Clipboard size={24} />
+                            </div>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>
+                              Tekan <kbd className="shortcut-badge">Ctrl</kbd> + <kbd className="shortcut-badge">V</kbd> untuk Paste
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                              atau drag & drop screenshot chart ke sini
+                            </div>
+
+                            <div className="chart-dropzone-actions" onClick={e => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                className="btn-dropzone-action primary"
+                                onClick={() => handlePasteFromClipboardBtn('result')}
+                              >
+                                <Clipboard size={13} /> Paste Clipboard
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-dropzone-action"
+                                onClick={() => resultInputRef.current?.click()}
+                              >
+                                <UploadCloud size={13} /> Pilih File
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    <input 
+                      ref={resultInputRef}
+                      type="file" 
+                      accept="image/*" 
+                      style={{ display: 'none' }}
+                      onChange={e => handleFileChange(e, 'result')} 
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1046,6 +1511,14 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
                     <div className="chart-image-placeholder">
                       <ImageIcon size={32} />
                       <span>Tidak ada gambar premarket</span>
+                      <button 
+                        type="button" 
+                        className="btn-dropzone-action"
+                        style={{ marginTop: '8px', fontSize: '11px', padding: '4px 10px' }}
+                        onClick={() => handleEditTrade(selectedTrade)}
+                      >
+                        <Pencil size={11} /> Edit Trade untuk Tambah
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1065,6 +1538,14 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
                     <div className="chart-image-placeholder">
                       <ImageIcon size={32} />
                       <span>Tidak ada gambar hasil</span>
+                      <button 
+                        type="button" 
+                        className="btn-dropzone-action"
+                        style={{ marginTop: '8px', fontSize: '11px', padding: '4px 10px' }}
+                        onClick={() => handleEditTrade(selectedTrade)}
+                      >
+                        <Pencil size={11} /> Edit Trade untuk Tambah
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1319,6 +1800,13 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
         </div>
       )}
       
+      {toastMessage && (
+        <div className="chart-paste-toast animate-slide-up">
+          <CheckCircle size={16} style={{ color: 'var(--color-win)' }} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {activeLightbox && (
         <Lightbox 
           src={activeLightbox.src} 
