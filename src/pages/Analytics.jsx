@@ -16,7 +16,10 @@ import {
   ArrowDownRight, 
   Calendar, 
   Layers, 
-  RefreshCw
+  RefreshCw,
+  X,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { getJurnal, getMetode, calculateTradeStats } from '../lib/api';
 
@@ -151,6 +154,38 @@ export default function Analytics({ dbTrigger, userId }) {
     };
   }, [filteredTrades]);
 
+  // ── FILTER VISIBILITY STATE ──
+  const [showFilters, setShowFilters] = useState(false);
+
+  // ── ACTIVE FILTERS HELPER ──
+  const activeFilters = useMemo(() => {
+    const list = [];
+    if (dateRange !== 'all') {
+      const labels = { '7days': '7 Hari Terakhir', '30days': '30 Hari Terakhir', 'this_month': 'Bulan Ini' };
+      list.push({ key: 'dateRange', label: labels[dateRange] || dateRange, clear: () => setDateRange('all') });
+    }
+    if (filterMethod !== '') {
+      const m = methods.find(x => String(x.id) === String(filterMethod));
+      list.push({ key: 'method', label: m ? m.nama : 'Metode Terpilih', clear: () => setFilterMethod('') });
+    }
+    if (filterPair !== '') {
+      list.push({ key: 'pair', label: filterPair, clear: () => setFilterPair('') });
+    }
+    if (filterSession !== '') {
+      list.push({ key: 'session', label: filterSession, clear: () => setFilterSession('') });
+    }
+    if (filterArah !== '') {
+      list.push({ key: 'arah', label: filterArah, clear: () => setFilterArah('') });
+    }
+    if (filterResult !== '') {
+      const resLabels = { win: 'Win (TP)', lose: 'Lose (SL)', break_even: 'BE', partial_tp: 'Partial TP', 'sl+': 'SL+' };
+      list.push({ key: 'result', label: resLabels[filterResult] || filterResult, clear: () => setFilterResult('') });
+    }
+    return list;
+  }, [dateRange, filterMethod, filterPair, filterSession, filterArah, filterResult, methods]);
+
+  const hasActiveFilters = activeFilters.length > 0;
+
   const resetFilters = () => {
     setDateRange('all');
     setFilterMethod('');
@@ -163,7 +198,7 @@ export default function Analytics({ dbTrigger, userId }) {
   return (
     <div className="animate-fade-in">
       {/* ── HEADER ── */}
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: '800', margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <BarChart3 size={24} style={{ color: 'var(--accent)' }} /> Analisis Strategy & Confluences
@@ -173,141 +208,343 @@ export default function Analytics({ dbTrigger, userId }) {
           </p>
         </div>
 
-        <button onClick={resetFilters} className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '12px' }}>
-          <RefreshCw size={14} /> Reset Filter
-        </button>
-      </div>
-
-      {/* ── MULTI-FILTER BAR ── */}
-      <div className="glass-card mb-30" style={{ padding: '16px 20px', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: '700', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            <Filter size={14} /> Filter Multi-Kriteria
-          </div>
-          {(dateRange !== 'all' || filterMethod !== '' || filterPair !== '' || filterSession !== '' || filterArah !== '' || filterResult !== '') && (
-            <span style={{ fontSize: '11px', color: '#60a5fa', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '12px', padding: '2px 8px' }}>
-              Filter aktif: Menampilkan {filteredTrades.length} dari {trades.length} trade
-            </span>
+        {/* Action Buttons in Header Corner */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {hasActiveFilters && (
+            <button 
+              onClick={resetFilters} 
+              className="btn btn-secondary" 
+              style={{ padding: '7px 12px', fontSize: '12px', borderRadius: '8px' }}
+              title="Reset semua filter"
+            >
+              <RefreshCw size={13} /> Reset Filter
+            </button>
           )}
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
-          <div>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Rentang Waktu</label>
-            <select value={dateRange} onChange={e => setDateRange(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.02)' }}>
-              <option value="all">Semua Waktu</option>
-              <option value="7days">7 Hari Terakhir</option>
-              <option value="30days">30 Hari Terakhir</option>
-              <option value="this_month">Bulan Ini</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Metode Trading</label>
-            <select value={filterMethod} onChange={e => setFilterMethod(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.02)' }}>
-              <option value="">Semua Metode</option>
-              {methods.map(m => (
-                <option key={m.id} value={m.id}>{m.nama}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Trading Pair</label>
-            <select value={filterPair} onChange={e => setFilterPair(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.02)' }}>
-              <option value="">Semua Pair</option>
-              {uniquePairs.map(p => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Sesi Trading</label>
-            <select value={filterSession} onChange={e => setFilterSession(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.02)' }}>
-              <option value="">Semua Sesi</option>
-              {uniqueSessions.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Arah Posisi</label>
-            <select value={filterArah} onChange={e => setFilterArah(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.02)' }}>
-              <option value="">Semua Arah</option>
-              <option value="BUY">BUY</option>
-              <option value="SELL">SELL</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Hasil Outcome</label>
-            <select value={filterResult} onChange={e => setFilterResult(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.02)' }}>
-              <option value="">Semua Hasil</option>
-              <option value="win">Win (Full TP)</option>
-              <option value="lose">Lose (Full SL)</option>
-              <option value="break_even">Break Even</option>
-              <option value="partial_tp">Partial TP</option>
-              <option value="sl+">SL+</option>
-            </select>
-          </div>
+          <button 
+            onClick={() => setShowFilters(!showFilters)} 
+            className={`btn ${showFilters ? 'btn-primary' : 'btn-secondary'}`} 
+            style={{ 
+              padding: '7px 14px', 
+              fontSize: '12px', 
+              borderRadius: '8px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px',
+              border: hasActiveFilters && !showFilters ? '1px solid rgba(99,102,241,0.5)' : undefined
+            }}
+          >
+            <Filter size={13} />
+            <span>Filter</span>
+            {hasActiveFilters && (
+              <span style={{ 
+                background: showFilters ? 'rgba(255,255,255,0.25)' : 'var(--accent)', 
+                color: '#fff', 
+                fontSize: '10px', 
+                fontWeight: '700', 
+                padding: '1px 6px', 
+                borderRadius: '10px',
+                lineHeight: '1.2' 
+              }}>
+                {activeFilters.length}
+              </span>
+            )}
+            {showFilters ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </button>
         </div>
       </div>
 
-      {/* ── KPI METRICS GRID ── */}
-      <div className="stats-grid-4 mb-30">
-        <div className="glass-card kpi-card">
-          <div className="kpi-icon-container" style={{ color: '#fff' }}><Activity size={20} /></div>
-          <div className="kpi-details"><span>Total Trades</span><h3>{stats.total}</h3></div>
+      {/* ── ACTIVE FILTERS MINI BAR (when filter is collapsed) ── */}
+      {!showFilters && hasActiveFilters && (
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px', 
+          flexWrap: 'wrap', 
+          marginBottom: '16px',
+          padding: '8px 14px',
+          background: 'rgba(99,102,241,0.06)',
+          border: '1px solid rgba(99,102,241,0.2)',
+          borderRadius: 'var(--radius-md)'
+        }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <Filter size={12} style={{ color: 'var(--accent)' }} /> Filter aktif ({filteredTrades.length}/{trades.length} trade):
+          </span>
+          {activeFilters.map(item => (
+            <span 
+              key={item.key}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '11px',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.08)'
+              }}
+            >
+              {item.label}
+              <button 
+                onClick={item.clear}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                title="Hapus filter ini"
+              >
+                <X size={11} />
+              </button>
+            </span>
+          ))}
+          <button 
+            onClick={resetFilters}
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              color: 'var(--color-lose)', 
+              fontSize: '11px', 
+              cursor: 'pointer',
+              fontWeight: '600',
+              padding: '2px 6px',
+              textDecoration: 'underline'
+            }}
+          >
+            Reset Semua
+          </button>
         </div>
-        <div className="glass-card kpi-card">
-          <div className="kpi-icon-container" style={{ color: 'var(--color-win)' }}><Award size={20} /></div>
-          <div className="kpi-details"><span>Win Rate</span><h3 style={{ color: 'var(--color-win)' }}>{stats.wr}%</h3></div>
-        </div>
-        <div className="glass-card kpi-card">
-          <div className="kpi-icon-container" style={{ color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)' }}><DollarSign size={20} /></div>
-          <div className="kpi-details"><span>Net Profit</span><h3 style={{ color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)' }}>{stats.pnl >= 0 ? '+' : ''}${stats.pnl}</h3></div>
-        </div>
-        <div className="glass-card kpi-card">
-          <div className="kpi-icon-container" style={{ color: 'var(--accent-secondary)' }}><TrendingUp size={20} /></div>
-          <div className="kpi-details"><span>Profit Factor</span><h3 style={{ color: 'var(--accent-secondary)' }}>{stats.profitFactor}</h3></div>
-        </div>
-      </div>
+      )}
 
-      {/* Secondary Quick Stats Chips */}
-      <div className="stats-grid-4 mb-30">
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Flame size={20} style={{ color: '#f97316' }} />
-          <div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Max Win Streak</div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--color-win)' }}>{streakStats.maxWin} Trade</div>
+      {/* ── COLLAPSIBLE FILTER PANEL ── */}
+      {showFilters && (
+        <div className="glass-card mb-20 animate-fade-in" style={{ padding: '16px 20px', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(18, 20, 29, 0.95)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: '700', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <Filter size={14} /> Filter Multi-Kriteria
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '11px', color: '#60a5fa', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '12px', padding: '2px 8px' }}>
+                Menampilkan {filteredTrades.length} dari {trades.length} trade
+              </span>
+
+              {hasActiveFilters && (
+                <button 
+                  onClick={resetFilters}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Reset Semua
+                </button>
+              )}
+
+              <button 
+                onClick={() => setShowFilters(false)}
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                title="Tutup Filter"
+              >
+                <X size={14} />
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Snowflake size={20} style={{ color: '#38bdf8' }} />
-          <div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Max Lose Streak</div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--color-lose)' }}>{streakStats.maxLose} Trade</div>
-          </div>
-        </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Rentang Waktu</label>
+              <select value={dateRange} onChange={e => setDateRange(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.03)', width: '100%', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+                <option value="all">Semua Waktu</option>
+                <option value="7days">7 Hari Terakhir</option>
+                <option value="30days">30 Hari Terakhir</option>
+                <option value="this_month">Bulan Ini</option>
+              </select>
+            </div>
 
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Percent size={20} style={{ color: 'var(--accent)' }} />
-          <div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Expectancy / Trade</div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: Number(stats.expectancy) >= 0 ? 'var(--color-win)' : 'var(--color-lose)' }}>
-              {Number(stats.expectancy) >= 0 ? '+' : ''}${stats.expectancy}
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Metode Trading</label>
+              <select value={filterMethod} onChange={e => setFilterMethod(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.03)', width: '100%', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+                <option value="">Semua Metode</option>
+                {methods.map(m => (
+                  <option key={m.id} value={m.id}>{m.nama}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Trading Pair</label>
+              <select value={filterPair} onChange={e => setFilterPair(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.03)', width: '100%', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+                <option value="">Semua Pair</option>
+                {uniquePairs.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Sesi Trading</label>
+              <select value={filterSession} onChange={e => setFilterSession(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.03)', width: '100%', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+                <option value="">Semua Sesi</option>
+                {uniqueSessions.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Arah Posisi</label>
+              <select value={filterArah} onChange={e => setFilterArah(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.03)', width: '100%', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+                <option value="">Semua Arah</option>
+                <option value="BUY">BUY</option>
+                <option value="SELL">SELL</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Hasil Outcome</label>
+              <select value={filterResult} onChange={e => setFilterResult(e.target.value)} style={{ fontSize: '12px', padding: '7px 10px', background: 'rgba(255,255,255,0.03)', width: '100%', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
+                <option value="">Semua Hasil</option>
+                <option value="win">Win (Full TP)</option>
+                <option value="lose">Lose (Full SL)</option>
+                <option value="break_even">Break Even</option>
+                <option value="partial_tp">Partial TP</option>
+                <option value="sl+">SL+</option>
+              </select>
             </div>
           </div>
         </div>
+      )}
 
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <ArrowDownRight size={20} style={{ color: 'var(--color-lose)' }} />
-          <div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Max Drawdown</div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--color-lose)' }}>-${streakStats.maxDD}</div>
+      {/* ── UNIFIED METRICS & RISK DASHBOARD (1 SINGLE CARD) ── */}
+      <div className="glass-card mb-30" style={{ padding: '20px 22px', position: 'relative' }}>
+        {/* Card Header with Corner Filter Button */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+              <Layers size={17} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '15px', fontWeight: '700', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Ringkasan Performa & Risiko Setup
+              </h2>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                Evaluasi komprehensif dari {filteredTrades.length} trade tereksekusi
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {hasActiveFilters && (
+              <span style={{ fontSize: '11px', color: '#60a5fa', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '12px', padding: '3px 10px' }}>
+                Filter Aktif: {filteredTrades.length}/{trades.length} Trade
+              </span>
+            )}
+            <button 
+              onClick={() => setShowFilters(!showFilters)} 
+              className={`btn ${showFilters ? 'btn-primary' : 'btn-secondary'}`} 
+              style={{ padding: '5px 11px', fontSize: '11px', borderRadius: '7px', display: 'flex', alignItems: 'center', gap: '5px' }}
+              title="Toggle Filter Panel"
+            >
+              <Filter size={12} />
+              <span>{showFilters ? 'Tutup Filter' : 'Filter'}</span>
+              {hasActiveFilters && (
+                <span style={{ background: showFilters ? 'rgba(255,255,255,0.25)' : 'var(--accent)', color: '#fff', fontSize: '9px', fontWeight: '700', padding: '1px 5px', borderRadius: '8px' }}>
+                  {activeFilters.length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Unified 8 Metrics Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px' }}>
+          {/* 1. Total Trades */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+              <Activity size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Trades</div>
+              <div style={{ fontSize: '20px', fontWeight: '800', color: '#fff', lineHeight: '1.2', marginTop: '2px' }}>{stats.total}</div>
+            </div>
+          </div>
+
+          {/* 2. Win Rate */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--color-win-bg)', border: '1px solid var(--color-win-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-win)', flexShrink: 0 }}>
+              <Award size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Win Rate</div>
+              <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--color-win)', lineHeight: '1.2', marginTop: '2px' }}>{stats.wr}%</div>
+            </div>
+          </div>
+
+          {/* 3. Net Profit */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: stats.pnl >= 0 ? 'var(--color-win-bg)' : 'var(--color-lose-bg)', border: `1px solid ${stats.pnl >= 0 ? 'var(--color-win-border)' : 'var(--color-lose-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)', flexShrink: 0 }}>
+              <DollarSign size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Profit</div>
+              <div style={{ fontSize: '20px', fontWeight: '800', color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
+                {stats.pnl >= 0 ? '+' : ''}${stats.pnl}
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Profit Factor */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-secondary)', flexShrink: 0 }}>
+              <TrendingUp size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Profit Factor</div>
+              <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-secondary)', lineHeight: '1.2', marginTop: '2px' }}>{stats.profitFactor}</div>
+            </div>
+          </div>
+
+          {/* 5. Max Win Streak */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f97316', flexShrink: 0 }}>
+              <Flame size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Max Win Streak</div>
+              <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--color-win)', lineHeight: '1.2', marginTop: '2px' }}>{streakStats.maxWin} <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-secondary)' }}>Trade</span></div>
+            </div>
+          </div>
+
+          {/* 6. Max Lose Streak */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8', flexShrink: 0 }}>
+              <Snowflake size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Max Lose Streak</div>
+              <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>{streakStats.maxLose} <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-secondary)' }}>Trade</span></div>
+            </div>
+          </div>
+
+          {/* 7. Expectancy / Trade */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
+              <Percent size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Expectancy / Trade</div>
+              <div style={{ fontSize: '20px', fontWeight: '800', color: Number(stats.expectancy) >= 0 ? 'var(--color-win)' : 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
+                {Number(stats.expectancy) >= 0 ? '+' : ''}${stats.expectancy}
+              </div>
+            </div>
+          </div>
+
+          {/* 8. Max Drawdown */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-lose)', flexShrink: 0 }}>
+              <ArrowDownRight size={18} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Max Drawdown</div>
+              <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
+                -${streakStats.maxDD}
+              </div>
+            </div>
           </div>
         </div>
       </div>
