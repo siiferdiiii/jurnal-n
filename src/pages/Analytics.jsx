@@ -28,6 +28,227 @@ import { getJurnal, getMetode, calculateTradeStats } from '../lib/api';
 ───────────────────────────────────────────────────────────── */
 const calculateStats = calculateTradeStats;
 
+/* ─────────────────────────────────────────────────────────────
+   RADAR / SPIDER WEB CHART COMPONENT (5 DIMENSIONS)
+   Total Trades, Win Rate, Win Streak, Lose Streak, Profit Factor
+───────────────────────────────────────────────────────────── */
+function StrategySpiderRadar({ stats, streakStats }) {
+  const [hoveredIdx, setHoveredIdx] = useState(null);
+
+  const sizeW = 380;
+  const sizeH = 310;
+  const cx = 190;
+  const cy = 150;
+  const r = 90;
+
+  // 5 Sumbu (Pentagon):
+  // 0: Win Rate (Top)
+  // 1: Profit Factor (Top-Right)
+  // 2: Win Terbanyak (Bottom-Right)
+  // 3: Lose Terbanyak (Bottom-Left)
+  // 4: Total Trades (Top-Left)
+  const pfValue = stats.profitFactor === '∞' ? 3.0 : (Number(stats.profitFactor) || 0);
+  const axes = [
+    {
+      key: 'wr',
+      label: 'Win Rate',
+      valStr: `${stats.wr}%`,
+      score: Math.min(1, Math.max(0, Number(stats.wr) / 100)),
+      color: '#10b981',
+      desc: 'Akurasi Kemenangan'
+    },
+    {
+      key: 'pf',
+      label: 'Profit Factor',
+      valStr: `${stats.profitFactor}`,
+      score: stats.profitFactor === '∞' ? 1.0 : Math.min(1, Math.max(0, pfValue / 3.0)),
+      color: '#06b6d4',
+      desc: 'Efisiensi Profitabilitas'
+    },
+    {
+      key: 'winStreak',
+      label: 'Win Terbanyak',
+      valStr: `${streakStats.maxWin} Trade`,
+      score: Math.min(1, Math.max(0, streakStats.maxWin / 5)),
+      color: '#f97316',
+      desc: 'Momentum Kemenangan Beruntun'
+    },
+    {
+      key: 'loseStreak',
+      label: 'Lose Terbanyak',
+      valStr: `${streakStats.maxLose} Trade`,
+      // Semakin kecil streak lose, semakin tinggi ketahanan risiko
+      score: Math.max(0.15, Math.min(1, 1 - (streakStats.maxLose / 6))),
+      color: '#f43f5e',
+      desc: 'Ketahanan Kontrol Kerugian'
+    },
+    {
+      key: 'total',
+      label: 'Total Trade',
+      valStr: `${stats.total}`,
+      score: Math.min(1, Math.max(0, stats.total / 20)),
+      color: '#a855f7',
+      desc: 'Validitas Ukuran Sampel'
+    }
+  ];
+
+  const totalAxes = axes.length;
+  const getCoords = (index, radiusFactor) => {
+    const angle = -Math.PI / 2 + (index * 2 * Math.PI) / totalAxes;
+    return {
+      x: cx + r * radiusFactor * Math.cos(angle),
+      y: cy + r * radiusFactor * Math.sin(angle),
+      angle
+    };
+  };
+
+  const levels = [0.25, 0.5, 0.75, 1.0];
+  const dataPoints = axes.map((axis, i) => {
+    const radiusFactor = Math.max(0.12, Math.min(1.0, axis.score));
+    return getCoords(i, radiusFactor);
+  });
+  const dataPointsStr = dataPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+      <svg 
+        viewBox={`0 0 ${sizeW} ${sizeH}`} 
+        style={{ width: '100%', maxWidth: '380px', height: 'auto', overflow: 'visible' }}
+      >
+        <defs>
+          <radialGradient id="spiderWebGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.45" />
+            <stop offset="55%" stopColor="#06b6d4" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0.10" />
+          </radialGradient>
+          <linearGradient id="spiderStrokeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#818cf8" />
+            <stop offset="40%" stopColor="#22d3ee" />
+            <stop offset="70%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#10b981" />
+          </linearGradient>
+          <filter id="spiderGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Web Grid Concentric Rings (Sarang Laba-Laba) */}
+        {levels.map((lvl, lIdx) => {
+          const pts = axes.map((_, i) => {
+            const { x, y } = getCoords(i, lvl);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+          }).join(' ');
+          return (
+            <polygon
+              key={`web-${lIdx}`}
+              points={pts}
+              fill={lIdx === levels.length - 1 ? 'rgba(255,255,255,0.012)' : 'none'}
+              stroke="rgba(255,255,255,0.08)"
+              strokeWidth={lIdx === levels.length - 1 ? '1.5' : '1'}
+              strokeDasharray={lIdx < levels.length - 1 ? '3,3' : undefined}
+            />
+          );
+        })}
+
+        {/* Spokes (Garis Jari-Jari Sarang) */}
+        {axes.map((_, i) => {
+          const outer = getCoords(i, 1.0);
+          return (
+            <line
+              key={`spoke-${i}`}
+              x1={cx}
+              y1={cy}
+              x2={outer.x}
+              y2={outer.y}
+              stroke="rgba(255,255,255,0.09)"
+              strokeWidth="1"
+            />
+          );
+        })}
+
+        {/* Center Pivot Point */}
+        <circle cx={cx} cy={cy} r="2.5" fill="rgba(255,255,255,0.3)" />
+
+        {/* Data Polygon (Bentuk Poligon Sarang Laba-Laba Aktif) */}
+        <polygon
+          points={dataPointsStr}
+          fill="url(#spiderWebGrad)"
+          stroke="url(#spiderStrokeGrad)"
+          strokeWidth="2.5"
+          filter="url(#spiderGlow)"
+          style={{ transition: 'all 0.4s ease' }}
+        />
+
+        {/* Vertex Nodes (Titik Sudut Aktif) */}
+        {dataPoints.map((p, i) => {
+          const isHovered = hoveredIdx === i;
+          return (
+            <g 
+              key={`vertex-${i}`} 
+              onMouseEnter={() => setHoveredIdx(i)} 
+              onMouseLeave={() => setHoveredIdx(null)}
+              style={{ cursor: 'pointer' }}
+            >
+              <circle cx={p.x} cy={p.y} r={isHovered ? 8 : 6} fill={axes[i].color} opacity={isHovered ? 0.6 : 0.3} style={{ transition: 'all 0.2s ease' }} />
+              <circle cx={p.x} cy={p.y} r={isHovered ? 4.5 : 3.5} fill="#fff" stroke={axes[i].color} strokeWidth="2" />
+            </g>
+          );
+        })}
+
+        {/* Outer Labels with Dynamic Text Positioning */}
+        {axes.map((axis, i) => {
+          const isHovered = hoveredIdx === i;
+          const labelDist = 1.28;
+          const pos = getCoords(i, labelDist);
+
+          let textAnchor = 'middle';
+          let dy = 3;
+          if (i === 0) {
+            dy = -10;
+          } else if (i === 1 || i === 2) {
+            textAnchor = 'start';
+          } else if (i === 3 || i === 4) {
+            textAnchor = 'end';
+          }
+
+          return (
+            <g 
+              key={`lbl-${i}`} 
+              transform={`translate(${pos.x}, ${pos.y + dy})`}
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+              style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
+            >
+              <text
+                textAnchor={textAnchor}
+                fontSize={isHovered ? '11' : '10'}
+                fontWeight={isHovered ? '800' : '600'}
+                fill={isHovered ? '#fff' : 'var(--text-secondary)'}
+                letterSpacing="0.4px"
+              >
+                {axis.label}
+              </text>
+              <text
+                textAnchor={textAnchor}
+                y="13"
+                fontSize={isHovered ? '12' : '11'}
+                fontWeight="800"
+                fill={axis.color}
+              >
+                {axis.valStr}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 export default function Analytics({ dbTrigger, userId }) {
   const [trades, setTrades] = useState([]);
   const [methods, setMethods] = useState([]);
@@ -441,98 +662,119 @@ export default function Analytics({ dbTrigger, userId }) {
           </div>
         </div>
 
-        {/* Unified 8 Metrics Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px' }}>
-          {/* 1. Total Trades */}
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
-              <Activity size={18} />
+        {/* Unified Spider Radar + Financial Metrics Dashboard */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '20px', alignItems: 'center' }}>
+          {/* SISI KIRI: RADAR SPIDER CHART */}
+          <div style={{ 
+            background: 'rgba(255,255,255,0.015)', 
+            border: '1px solid rgba(255,255,255,0.05)', 
+            borderRadius: 'var(--radius-md)', 
+            padding: '16px',
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            position: 'relative'
+          }}>
+            <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#fff' }}>
+                <Sparkles size={14} style={{ color: 'var(--accent)' }} /> Radar Kinerja Strategi
+              </div>
+              <span style={{ fontSize: '10px', color: 'var(--accent)', background: 'rgba(99,102,241,0.1)', padding: '2px 8px', borderRadius: '10px', border: '1px solid rgba(99,102,241,0.2)', fontWeight: '600' }}>
+                5 Pilar Utama
+              </span>
             </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Trades</div>
-              <div style={{ fontSize: '20px', fontWeight: '800', color: '#fff', lineHeight: '1.2', marginTop: '2px' }}>{stats.total}</div>
+
+            <StrategySpiderRadar stats={stats} streakStats={streakStats} />
+
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '6px' }}>
+              Visualisasi pentagon sarang laba-laba mengukur keseimbangan akurasi & kontrol risiko
             </div>
           </div>
 
-          {/* 2. Win Rate */}
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--color-win-bg)', border: '1px solid var(--color-win-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-win)', flexShrink: 0 }}>
-              <Award size={18} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Win Rate</div>
-              <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--color-win)', lineHeight: '1.2', marginTop: '2px' }}>{stats.wr}%</div>
-            </div>
-          </div>
+          {/* SISI KANAN: METRIK FINANSIAL & RISIKO MODAL */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* 4 Kartu Finansial & Risiko Utama */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+              {/* Net Profit */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: stats.pnl >= 0 ? 'var(--color-win-bg)' : 'var(--color-lose-bg)', border: `1px solid ${stats.pnl >= 0 ? 'var(--color-win-border)' : 'var(--color-lose-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)', flexShrink: 0 }}>
+                  <DollarSign size={18} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Profit</div>
+                  <div style={{ fontSize: '18px', fontWeight: '800', color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
+                    {stats.pnl >= 0 ? '+' : ''}${stats.pnl}
+                  </div>
+                </div>
+              </div>
 
-          {/* 3. Net Profit */}
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: stats.pnl >= 0 ? 'var(--color-win-bg)' : 'var(--color-lose-bg)', border: `1px solid ${stats.pnl >= 0 ? 'var(--color-win-border)' : 'var(--color-lose-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)', flexShrink: 0 }}>
-              <DollarSign size={18} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Profit</div>
-              <div style={{ fontSize: '20px', fontWeight: '800', color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
-                {stats.pnl >= 0 ? '+' : ''}${stats.pnl}
+              {/* Expectancy / Trade */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
+                  <Percent size={18} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Expectancy</div>
+                  <div style={{ fontSize: '18px', fontWeight: '800', color: Number(stats.expectancy) >= 0 ? 'var(--color-win)' : 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
+                    {Number(stats.expectancy) >= 0 ? '+' : ''}${stats.expectancy}
+                  </div>
+                </div>
+              </div>
+
+              {/* Max Drawdown */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-lose)', flexShrink: 0 }}>
+                  <ArrowDownRight size={18} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Max Drawdown</div>
+                  <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
+                    -${streakStats.maxDD}
+                  </div>
+                </div>
+              </div>
+
+              {/* Avg R:R */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-secondary)', flexShrink: 0 }}>
+                  <TrendingUp size={18} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Avg R:R</div>
+                  <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--accent-secondary)', lineHeight: '1.2', marginTop: '2px' }}>
+                    {stats.avgRR}R
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* 4. Profit Factor */}
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-secondary)', flexShrink: 0 }}>
-              <TrendingUp size={18} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Profit Factor</div>
-              <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-secondary)', lineHeight: '1.2', marginTop: '2px' }}>{stats.profitFactor}</div>
-            </div>
-          </div>
-
-          {/* 5. Max Win Streak */}
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f97316', flexShrink: 0 }}>
-              <Flame size={18} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Max Win Streak</div>
-              <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--color-win)', lineHeight: '1.2', marginTop: '2px' }}>{streakStats.maxWin} <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-secondary)' }}>Trade</span></div>
-            </div>
-          </div>
-
-          {/* 6. Max Lose Streak */}
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8', flexShrink: 0 }}>
-              <Snowflake size={18} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Max Lose Streak</div>
-              <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>{streakStats.maxLose} <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-secondary)' }}>Trade</span></div>
-            </div>
-          </div>
-
-          {/* 7. Expectancy / Trade */}
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
-              <Percent size={18} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Expectancy / Trade</div>
-              <div style={{ fontSize: '20px', fontWeight: '800', color: Number(stats.expectancy) >= 0 ? 'var(--color-win)' : 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
-                {Number(stats.expectancy) >= 0 ? '+' : ''}${stats.expectancy}
+            {/* Quick Strip Pilar Sarang Laba-Laba */}
+            <div style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                Rincian 5 Sumbu Radar:
               </div>
-            </div>
-          </div>
-
-          {/* 8. Max Drawdown */}
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px', transition: 'var(--transition-normal)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-lose)', flexShrink: 0 }}>
-              <ArrowDownRight size={18} />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Max Drawdown</div>
-              <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
-                -${streakStats.maxDD}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: '8px' }}>
+                <div style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Trade</div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#a855f7', marginTop: '2px' }}>{stats.total}</div>
+                </div>
+                <div style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Win Rate</div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--color-win)', marginTop: '2px' }}>{stats.wr}%</div>
+                </div>
+                <div style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Profit Factor</div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-secondary)', marginTop: '2px' }}>{stats.profitFactor}</div>
+                </div>
+                <div style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Win Streak</div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#f97316', marginTop: '2px' }}>{streakStats.maxWin} Trd</div>
+                </div>
+                <div style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Lose Streak</div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--color-lose)', marginTop: '2px' }}>{streakStats.maxLose} Trd</div>
+                </div>
               </div>
             </div>
           </div>
