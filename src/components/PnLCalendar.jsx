@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, Camera, ArrowLeftRight, Check } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { ChevronLeft, ChevronRight, Calendar, Camera, ArrowLeftRight, Check, Loader2 } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 export default function PnLCalendar({ trades = [] }) {
   // Local current date (default to today)
@@ -8,7 +9,11 @@ export default function PnLCalendar({ trades = [] }) {
   const [selectedDate, setSelectedDate] = useState(() => {
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   });
-  const [copied, setCopied] = useState(false);
+  
+  // Screenshot capture states
+  const calendarCardRef = useRef(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [captureSuccess, setCaptureSuccess] = useState(false);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth(); // 0-indexed
@@ -98,14 +103,57 @@ export default function PnLCalendar({ trades = [] }) {
     return isNeg ? `-$${formatted}` : `$${formatted}`;
   };
 
-  // Handle Share click
-  const handleShare = () => {
-    const text = `Daily Summary - ${monthNames[month]} ${year}\nPnL: ${formatSummaryCurrency(monthlyPnL)} | Days: ${monthlyTradingDays}`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+  // Capture screenshot of calendar card
+  const handleCaptureScreenshot = async () => {
+    if (!calendarCardRef.current || isCapturing) return;
+
+    try {
+      setIsCapturing(true);
+
+      // Brief delay to ensure hover/focus states settle
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const canvas = await html2canvas(calendarCardRef.current, {
+        scale: 2, // 2x high resolution
+        backgroundColor: null,
+        useCORS: true,
+        logging: false,
       });
+
+      // 1. Download image file
+      const imageUri = canvas.toDataURL('image/png');
+      const filename = `jurnal-n-calendar-${monthNames[month].toLowerCase()}-${year}.png`;
+      const downloadLink = document.createElement('a');
+      downloadLink.href = imageUri;
+      downloadLink.download = filename;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+
+      // 2. Copy image blob to clipboard if permitted by browser
+      if (navigator.clipboard && window.ClipboardItem) {
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            try {
+              await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+              ]);
+            } catch (clipboardErr) {
+              console.warn('Clipboard write ignored:', clipboardErr);
+            }
+          }
+        }, 'image/png');
+      }
+
+      setCaptureSuccess(true);
+      setTimeout(() => {
+        setCaptureSuccess(false);
+      }, 2500);
+    } catch (error) {
+      console.error('Failed to capture calendar screenshot:', error);
+      alert('Gagal mengambil screenshot kalender.');
+    } finally {
+      setIsCapturing(false);
     }
   };
 
@@ -173,18 +221,33 @@ export default function PnLCalendar({ trades = [] }) {
   }, [year, month, firstDayOfWeek, numWeeks, trades]);
 
   return (
-    <div className="pnl-summary-card">
+    <div className="pnl-summary-card" ref={calendarCardRef}>
       {/* ── Top Bar: Title & Share ── */}
       <div className="pnl-summary-header">
         <h3 className="pnl-summary-title">Daily Summary</h3>
         <button
           type="button"
-          onClick={handleShare}
+          onClick={handleCaptureScreenshot}
+          disabled={isCapturing}
           className="pnl-share-button"
-          title="Share Daily Summary"
+          title="Download Screenshot Bagian Kalender"
         >
-          {copied ? <Check size={16} strokeWidth={2.2} /> : <Camera size={16} strokeWidth={2} />}
-          <span>{copied ? 'Copied' : 'Share'}</span>
+          {isCapturing ? (
+            <>
+              <Loader2 size={16} strokeWidth={2.2} className="animate-spin" />
+              <span>Menyimpan...</span>
+            </>
+          ) : captureSuccess ? (
+            <>
+              <Check size={16} strokeWidth={2.2} style={{ color: 'var(--cal-pnl-green, #10b981)' }} />
+              <span style={{ color: 'var(--cal-pnl-green, #10b981)' }}>Tersimpan!</span>
+            </>
+          ) : (
+            <>
+              <Camera size={16} strokeWidth={2} />
+              <span>Share</span>
+            </>
+          )}
         </button>
       </div>
 
