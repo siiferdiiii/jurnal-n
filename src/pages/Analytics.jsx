@@ -692,88 +692,115 @@ export default function Analytics({ dbTrigger, userId }) {
             </div>
           </div>
 
-          {/* SISI KANAN: METRIK FINANSIAL & RISIKO MODAL */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* 4 Kartu Finansial & Risiko Utama */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
-              {/* Net Profit */}
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: stats.pnl >= 0 ? 'var(--color-win-bg)' : 'var(--color-lose-bg)', border: `1px solid ${stats.pnl >= 0 ? 'var(--color-win-border)' : 'var(--color-lose-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)', flexShrink: 0 }}>
-                  <DollarSign size={18} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Net Profit</div>
-                  <div style={{ fontSize: '18px', fontWeight: '800', color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
-                    {stats.pnl >= 0 ? '+' : ''}${stats.pnl}
-                  </div>
-                </div>
+          {/* SISI KANAN: 1 CARD TUNGGAL UNTUK SEMUA VARIABEL */}
+          <div style={{ 
+            background: 'rgba(255,255,255,0.015)', 
+            border: '1px solid rgba(255,255,255,0.05)', 
+            borderRadius: 'var(--radius-md)', 
+            padding: '20px 22px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between'
+          }}>
+            {/* Header Card */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Activity size={15} style={{ color: 'var(--accent)' }} /> Ringkasan Metrik Lengkap
               </div>
-
-              {/* Expectancy / Trade */}
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
-                  <Percent size={18} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Expectancy</div>
-                  <div style={{ fontSize: '18px', fontWeight: '800', color: Number(stats.expectancy) >= 0 ? 'var(--color-win)' : 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
-                    {Number(stats.expectancy) >= 0 ? '+' : ''}${stats.expectancy}
-                  </div>
-                </div>
-              </div>
-
-              {/* Max Drawdown */}
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-lose)', flexShrink: 0 }}>
-                  <ArrowDownRight size={18} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Max Drawdown</div>
-                  <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--color-lose)', lineHeight: '1.2', marginTop: '2px' }}>
-                    -${streakStats.maxDD}
-                  </div>
-                </div>
-              </div>
-
-              {/* Avg R:R */}
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-secondary)', flexShrink: 0 }}>
-                  <TrendingUp size={18} />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Avg R:R</div>
-                  <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--accent-secondary)', lineHeight: '1.2', marginTop: '2px' }}>
-                    {stats.avgRR}R
-                  </div>
-                </div>
-              </div>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {filteredTrades.length} Trade Terkalkulasi
+              </span>
             </div>
 
-            {/* Quick Strip Pilar Sarang Laba-Laba */}
-            <div style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
-              <div style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                Rincian 5 Sumbu Radar:
+            {/* Grid Semua Variabel (3 kolom x 3 baris) - Rapi dalam 1 Card */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px 16px' }}>
+              {/* 1. Net Profit */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Net Profit
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: stats.pnl >= 0 ? 'var(--color-win)' : 'var(--color-lose)', marginTop: '4px', lineHeight: '1.2' }}>
+                  {stats.pnl >= 0 ? '+' : ''}${stats.pnl}
+                </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: '8px' }}>
-                <div style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Trade</div>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#a855f7', marginTop: '2px' }}>{stats.total}</div>
+
+              {/* 2. Expectancy */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Expectancy
                 </div>
-                <div style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Win Rate</div>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--color-win)', marginTop: '2px' }}>{stats.wr}%</div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: Number(stats.expectancy) >= 0 ? 'var(--color-win)' : 'var(--color-lose)', marginTop: '4px', lineHeight: '1.2' }}>
+                  {Number(stats.expectancy) >= 0 ? '+' : ''}${stats.expectancy}
                 </div>
-                <div style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Profit Factor</div>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-secondary)', marginTop: '2px' }}>{stats.profitFactor}</div>
+              </div>
+
+              {/* 3. Max Drawdown */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Max Drawdown
                 </div>
-                <div style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Win Streak</div>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#f97316', marginTop: '2px' }}>{streakStats.maxWin} Trd</div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--color-lose)', marginTop: '4px', lineHeight: '1.2' }}>
+                  -${streakStats.maxDD}
                 </div>
-                <div style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Lose Streak</div>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--color-lose)', marginTop: '2px' }}>{streakStats.maxLose} Trd</div>
+              </div>
+
+              {/* 4. Win Rate */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Win Rate
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--color-win)', marginTop: '4px', lineHeight: '1.2' }}>
+                  {stats.wr}%
+                </div>
+              </div>
+
+              {/* 5. Profit Factor */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Profit Factor
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-secondary)', marginTop: '4px', lineHeight: '1.2' }}>
+                  {stats.profitFactor}
+                </div>
+              </div>
+
+              {/* 6. Avg R:R */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Avg R:R
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-secondary)', marginTop: '4px', lineHeight: '1.2' }}>
+                  {stats.avgRR}R
+                </div>
+              </div>
+
+              {/* 7. Total Trade */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Total Trade
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: '#a855f7', marginTop: '4px', lineHeight: '1.2' }}>
+                  {stats.total} <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-secondary)' }}>({stats.wins}W/{stats.losses}L)</span>
+                </div>
+              </div>
+
+              {/* 8. Win Streak */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Win Streak
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: '#f97316', marginTop: '4px', lineHeight: '1.2' }}>
+                  {streakStats.maxWin} <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-secondary)' }}>Trade</span>
+                </div>
+              </div>
+
+              {/* 9. Lose Streak */}
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Lose Streak
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--color-lose)', marginTop: '4px', lineHeight: '1.2' }}>
+                  {streakStats.maxLose} <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-secondary)' }}>Trade</span>
                 </div>
               </div>
             </div>
