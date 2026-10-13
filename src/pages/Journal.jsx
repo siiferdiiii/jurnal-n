@@ -933,35 +933,6 @@ export default function Journal({ dbTrigger, onDataChange, userId }) {
 
               {/* Upload Dropzones with Ctrl+V, Drag & Drop, and File Browse */}
               <div className="chart-paste-section">
-                {/* Info banner */}
-                <div className="chart-paste-banner">
-                  <div className="chart-paste-banner-left">
-                    <Clipboard size={18} style={{ color: 'var(--accent)' }} />
-                    <span>
-                      Fitur Cepat: Tekan <kbd className="shortcut-badge">Ctrl</kbd> + <kbd className="shortcut-badge">V</kbd> di mana saja untuk menempelkan chart screenshot, drag & drop, atau klik kotak di bawah.
-                    </span>
-                  </div>
-                  <div className="chart-paste-banner-right">
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Target Ctrl+V:</span>
-                    <button
-                      type="button"
-                      className={`target-badge ${activePasteTarget === 'premarket' ? 'active' : 'inactive'}`}
-                      onClick={() => setActivePasteTarget('premarket')}
-                    >
-                      {activePasteTarget === 'premarket' && <span className="target-pulse-dot" />}
-                      Premarket
-                    </button>
-                    <button
-                      type="button"
-                      className={`target-badge ${activePasteTarget === 'result' ? 'active' : 'inactive'}`}
-                      onClick={() => setActivePasteTarget('result')}
-                    >
-                      {activePasteTarget === 'result' && <span className="target-pulse-dot" />}
-                      Result
-                    </button>
-                  </div>
-                </div>
-
                 <div className="chart-paste-grid">
                   {/* Premarket Chart Card */}
                   <div 
