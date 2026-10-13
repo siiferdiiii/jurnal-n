@@ -57,21 +57,14 @@ export function calculateTradingSession(timeInput) {
   }
 }
 
-/* ─────────────────────────────────────────────────────────────
-   WIN / LOSS HELPER FUNCTIONS
-───────────────────────────────────────────────────────────── */
-
-export function isWinTrade(hasil) {
-  if (!hasil) return false;
-  const val = String(hasil).toLowerCase().trim();
-  return ['win', 'partial_tp', 'sl+'].includes(val);
-}
-
-export function isLossTrade(hasil) {
-  if (!hasil) return false;
-  const val = String(hasil).toLowerCase().trim();
-  return ['lose', 'sl'].includes(val);
-}
+export {
+  isWinTrade,
+  isLossTrade,
+  isBeTrade,
+  normalizeTradeOutcome,
+  calculateTradeStats
+} from './tradeStats';
+import { calculateTradeStats } from './tradeStats';
 
 /* ─────────────────────────────────────────────────────────────
    SCHEMA MAPPERS — camelCase (React) ↔ snake_case (Supabase)
@@ -365,24 +358,19 @@ export async function getPublicTraders() {
 
   return profiles.map((p) => {
     const ts = tradeMap[p.user_id] || [];
-    const total = ts.length;
-    const wins  = ts.filter((t) => isWinTrade(t.hasil_trade)).length;
-    const totalPnl = ts.reduce((s, t) => s + (Number(t.profit_nominal) || 0), 0);
-    const totalRr  = ts.reduce((s, t) => s + (Number(t.rr_diperoleh) || 0), 0);
-    const avgRr   = total > 0 ? +(totalRr / total).toFixed(2) : 0;
-    const winRate = total > 0 ? +((wins / total) * 100).toFixed(1) : 0;
-    const pairs   = [...new Set(ts.map((t) => t.pair))].length;
+    const stats = calculateTradeStats(ts);
+    const pairs = [...new Set(ts.map((t) => t.pair).filter(Boolean))].length;
     const hasPhotos = ts.some((t) => t.foto_premarket_url || t.foto_result_url);
     return {
       userId:      p.user_id,
       displayName: p.display_name,
       bio:         p.bio,
       joinedAt:    p.created_at,
-      total,
-      wins,
-      winRate,
-      totalPnl,
-      avgRr,
+      total:       stats.total,
+      wins:        stats.wins,
+      winRate:     stats.winRate,
+      totalPnl:    stats.totalPnl,
+      avgRr:       stats.avgRr,
       pairs,
       hasPhotos,
     };

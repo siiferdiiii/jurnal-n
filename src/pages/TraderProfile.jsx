@@ -25,8 +25,7 @@ import {
   addTraderComment,
   deleteTraderComment,
   getMetode,
-  isWinTrade,
-  isLossTrade,
+  calculateTradeStats,
 } from '../lib/api';
 import Lightbox from '../components/Lightbox';
 
@@ -86,7 +85,7 @@ function CommentItem({ comment, currentUserId, onDelete }) {
 }
 
 /* ── Main Component ── */
-export default function TraderProfile({ trader, session, onBack }) {
+export default function TraderProfile({ trader, session, onBack, dbTrigger }) {
   const [activeTab,     setActiveTab]     = useState('stats');
   const [trades,        setTrades]        = useState([]);
   const [methods,       setMethods]       = useState([]);
@@ -117,7 +116,7 @@ export default function TraderProfile({ trader, session, onBack }) {
       })
       .catch(console.error)
       .finally(() => setLoadingTrades(false));
-  }, [trader.userId]);
+  }, [trader.userId, dbTrigger]);
 
   // Load comments
   useEffect(() => {
@@ -133,13 +132,14 @@ export default function TraderProfile({ trader, session, onBack }) {
     return found ? found.nama : 'Unknown Method';
   };
 
-  // Compute stats from trades
-  const total  = trades.length;
-  const wins   = trades.filter(t => isWinTrade(t.hasilTrade)).length;
-  const losses = trades.filter(t => isLossTrade(t.hasilTrade)).length;
-  const totalPnl = trades.reduce((s, t) => s + (t.profitNominal || 0), 0);
-  const avgRr  = total > 0 ? (trades.reduce((s, t) => s + (t.rrDiperoleh || 0), 0) / total).toFixed(2) : '0';
-  const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0';
+  // Compute stats from trades using centralized helper
+  const stats = calculateTradeStats(trades);
+  const total = stats.total;
+  const wins = stats.wins;
+  const losses = stats.losses;
+  const totalPnl = stats.totalPnl;
+  const avgRr = stats.avgRR;
+  const winRate = stats.wr;
   const galleryTrades = trades.filter(t => t.fotoPremarket || t.fotoResult);
 
   const handleAddComment = async (e) => {

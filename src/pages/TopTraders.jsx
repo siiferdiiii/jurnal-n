@@ -144,7 +144,7 @@ function SkeletonCard() {
 }
 
 /* ── Main Component ── */
-export default function TopTraders({ onSelectTrader }) {
+export default function TopTraders({ onSelectTrader, dbTrigger }) {
   const [traders, setTraders]   = useState([]);
   const [loading, setLoading]   = useState(true);
   const [error,   setError]     = useState(null);
@@ -160,7 +160,7 @@ export default function TopTraders({ onSelectTrader }) {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, []);
+  useEffect(load, [dbTrigger]);
 
   const filtered = useMemo(() => {
     let list = traders;

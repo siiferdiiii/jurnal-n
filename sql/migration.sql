@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS jurnal (
   key_level_digunakan   TEXT,
   trigger_entry         TEXT,
   risk_reward_ratio     NUMERIC(6,2),
-  hasil_trade           TEXT CHECK (hasil_trade IN ('win','lose','break_even','partial_tp','sl+')),
+  hasil_trade           TEXT CHECK (hasil_trade IN ('win','lose','break_even','partial_tp','sl+','sl')),
   profit_nominal        NUMERIC(12,2),
   rr_diperoleh          NUMERIC(6,2),
   psikologi_sebelum     TEXT,
@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS jurnal (
 -- Alter Table statement untuk tabel yang sudah ada
 ALTER TABLE jurnal ALTER COLUMN jenis_trade DROP NOT NULL;
 ALTER TABLE jurnal ALTER COLUMN hasil_trade DROP NOT NULL;
+ALTER TABLE jurnal DROP CONSTRAINT IF EXISTS jurnal_hasil_trade_check;
+ALTER TABLE jurnal ADD CONSTRAINT jurnal_hasil_trade_check CHECK (hasil_trade IS NULL OR hasil_trade IN ('win','lose','break_even','partial_tp','sl+','sl'));
 ALTER TABLE jurnal ADD COLUMN IF NOT EXISTS mt5_ticket TEXT;
 ALTER TABLE jurnal ADD COLUMN IF NOT EXISTS lot_size NUMERIC(8,2);
 ALTER TABLE jurnal ADD COLUMN IF NOT EXISTS open_price NUMERIC(12,5);

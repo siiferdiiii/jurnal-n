@@ -415,254 +415,345 @@ body {
 /* ─────────────────────────────────────────────────────────────
    PNL CALENDAR COMPONENT (MATCHING SPECIFIED UI DESIGN)
 ───────────────────────────────────────────────────────────── */
-.pnl-calendar-container {
-  background: rgba(14, 18, 34, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.pnl-summary-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
   border-radius: 16px;
-  padding: 24px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  padding: 24px 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  font-family: var(--font-sans, system-ui, sans-serif);
+  color: #111827;
+  width: 100%;
 }
 
-.pnl-calendar-header {
+.pnl-summary-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-.pnl-nav-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #ffffff;
+.pnl-summary-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.pnl-share-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 7px 15px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.15s ease;
+}
+
+.pnl-share-button:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.pnl-summary-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pnl-nav-group {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
+}
+
+.pnl-ctrl-btn {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #374151;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.pnl-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: scale(1.06);
+.pnl-ctrl-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
 }
 
-.pnl-header-title {
-  text-align: center;
+.pnl-ctrl-square {
+  width: 36px;
+  height: 36px;
+  padding: 0;
 }
 
-.pnl-month-year {
-  font-size: 22px;
+.pnl-ctrl-today {
+  height: 36px;
+  padding: 0 14px;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pnl-current-month-label {
+  font-size: 17px;
   font-weight: 700;
-  color: #ffffff;
-  margin: 0;
-  letter-spacing: 0.5px;
+  color: #111827;
+  margin: 0 6px;
 }
 
-.pnl-monthly-sum {
-  font-size: 15px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-  margin-top: 4px;
+.pnl-stats-pill {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  height: 36px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
-.monthly-pnl-val {
-  font-weight: 800;
-  font-family: var(--font-mono, monospace);
-  margin-left: 4px;
+.pnl-pill-label {
+  color: #6b7280;
+  font-weight: 500;
 }
 
-.text-win {
-  color: #10b981 !important;
+.pnl-pill-val {
+  font-weight: 700;
+  font-family: var(--font-mono, inherit);
 }
 
-.text-lose {
-  color: #f43f5e !important;
+.pnl-pill-divider {
+  width: 1px;
+  height: 16px;
+  background: #e5e7eb;
+  margin: 0 6px;
 }
 
-.text-neutral {
-  color: #94a3b8 !important;
+.pnl-pill-days {
+  color: #111827;
 }
 
-.pnl-calendar-wrapper {
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.pnl-days-header {
+.pnl-main-layout {
   display: grid;
-  grid-template-columns: repeat(8, minmax(75px, 1fr));
+  grid-template-columns: 1fr 310px;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .pnl-main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pnl-calendar-section {
+  min-width: 0;
+}
+
+.pnl-weekdays-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
   gap: 8px;
   margin-bottom: 12px;
 }
 
-.pnl-day-label {
+.pnl-weekday-label {
   text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.45);
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
 }
 
-.pnl-grid-body {
+.pnl-days-grid {
   display: grid;
-  grid-template-columns: repeat(8, minmax(75px, 1fr));
+  grid-template-columns: repeat(7, 1fr);
   gap: 8px;
 }
 
-.pnl-day-cell {
-  background: rgba(18, 24, 42, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 10px 10px;
-  min-height: 95px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  position: relative;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.pnl-day-cell:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
-}
-
-.pnl-day-cell.other-month {
-  opacity: 0.35;
-  background: rgba(14, 18, 30, 0.4);
-}
-
-/* Win / Loss Cell Background Tinting */
-.pnl-day-cell.is-win {
-  background: rgba(6, 78, 59, 0.25);
-  border-color: rgba(16, 185, 129, 0.3);
-}
-
-.pnl-day-cell.is-lose {
-  background: rgba(136, 19, 55, 0.25);
-  border-color: rgba(244, 63, 94, 0.3);
-}
-
-.pnl-day-cell.is-zero {
-  background: rgba(30, 41, 59, 0.5);
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-/* Today Cell Highlight */
-.pnl-day-cell.is-today {
-  background: rgba(13, 148, 136, 0.25);
-  border: 2px solid #0d9488;
-  box-shadow: 0 0 14px rgba(13, 148, 136, 0.3);
-}
-
-.cell-top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.cell-date-group {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.cell-day-num {
-  font-size: 15px;
-  font-weight: 800;
-  color: #ffffff;
-}
-
-.pnl-day-cell.other-month .cell-day-num {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.today-badge {
-  background: rgba(13, 148, 136, 0.35);
-  border: 1px solid rgba(45, 212, 191, 0.6);
-  color: #2dd4bf;
-  font-size: 9px;
-  font-weight: 800;
-  padding: 1px 5px;
-  border-radius: 4px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.star-btn {
-  background: none;
+.pnl-empty-cell {
+  min-height: 88px;
+  background: transparent;
   border: none;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.15s ease;
 }
 
-.star-btn:hover {
-  transform: scale(1.2);
-}
-
-.cell-content {
-  text-align: center;
-  margin-top: 6px;
+.pnl-date-cell {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  min-height: 88px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
 }
 
-.cell-pnl-amount {
-  font-size: 14px;
-  font-weight: 800;
-  font-family: var(--font-mono, monospace);
-  line-height: 1.2;
+.pnl-date-cell:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
-.cell-trade-count {
-  font-size: 11px;
+.pnl-date-cell.is-today-active {
+  background: #e8edf2;
+  border-color: #cbd5e1;
+}
+
+.pnl-cell-number {
+  font-size: 15px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
-  margin-top: 3px;
+  line-height: 1;
 }
 
-.cell-no-trades {
+.number-muted {
+  color: #cbd5e1;
+}
+
+.number-dark {
+  color: #111827;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.number-today {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.pnl-cell-trade-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.pnl-cell-count-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 12px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.35);
+  color: #374151;
+  margin-bottom: 1px;
 }
 
-/* Week Summary Cell Styling (8th column) */
-.week-summary-cell {
-  background: rgba(15, 21, 38, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+.pnl-cell-arrow-icon {
+  color: #4b5563;
 }
 
-.week-summary-cell.is-win-summary {
-  background: rgba(6, 78, 59, 0.2);
-  border-color: rgba(16, 185, 129, 0.28);
+.pnl-cell-pnl-val {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-mono, inherit);
 }
 
-.week-summary-cell.is-lose-summary {
-  background: rgba(136, 19, 55, 0.2);
-  border-color: rgba(244, 63, 94, 0.28);
+.pnl-green {
+  color: #16a34a !important;
 }
 
-.week-label-title {
-  font-size: 11px;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.7);
-  letter-spacing: 0.5px;
+.pnl-red {
+  color: #dc2626 !important;
 }
+
+.pnl-weekly-section {
+  min-width: 0;
+}
+
+.pnl-weekly-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.pnl-weekly-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pnl-weekly-card {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 13px 16px;
+  transition: border-color 0.15s ease;
+}
+
+.pnl-weekly-card:hover {
+  border-color: #cbd5e1;
+}
+
+.pnl-weekly-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pnl-weekly-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.pnl-weekly-range {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.pnl-weekly-card-bottom {
+  margin-top: 8px;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pnl-weekly-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pnl-weekly-stat-lbl {
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.pnl-weekly-stat-num {
+  font-weight: 700;
+  font-family: var(--font-mono, inherit);
+}
+
+.pnl-days-count {
+  color: #111827;
+}
+
+.pnl-weekly-no-trades {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 400;
+}
+
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {

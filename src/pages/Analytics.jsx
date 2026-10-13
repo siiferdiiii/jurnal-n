@@ -16,37 +16,14 @@ import {
   ArrowDownRight, 
   Calendar, 
   Layers, 
-  RefreshCw,
-  Search,
-  Check,
-  HelpCircle
+  RefreshCw
 } from 'lucide-react';
-import { getJurnal, getMetode, isWinTrade, isLossTrade } from '../lib/api';
+import { getJurnal, getMetode, calculateTradeStats } from '../lib/api';
 
 /* ─────────────────────────────────────────────────────────────
-   HELPER FUNCTIONS FOR STATS & RECOMMENDATIONS
+   USE CENTRALIZED STATS HELPER
 ───────────────────────────────────────────────────────────── */
-
-function calculateStats(subset) {
-  const total = subset.length;
-  if (total === 0) return { total: 0, wins: 0, losses: 0, wr: '0.0', pnl: 0, avgRR: '0.00', profitFactor: '0.00', expectancy: '0.00' };
-
-  const wins = subset.filter(t => isWinTrade(t.hasilTrade)).length;
-  const losses = subset.filter(t => isLossTrade(t.hasilTrade)).length;
-  const wr = ((wins / total) * 100).toFixed(1);
-  
-  const pnl = subset.reduce((acc, t) => acc + (t.profitNominal || 0), 0);
-  const totalRR = subset.reduce((acc, t) => acc + (t.rrDiperoleh || 0), 0);
-  const avgRR = (totalRR / total).toFixed(2);
-
-  const grossProfit = subset.reduce((acc, t) => acc + (t.profitNominal > 0 ? t.profitNominal : 0), 0);
-  const grossLoss = subset.reduce((acc, t) => acc + (t.profitNominal < 0 ? Math.abs(t.profitNominal) : 0), 0);
-  const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss).toFixed(2) : grossProfit > 0 ? '∞' : '0.00';
-
-  const expectancy = (pnl / total).toFixed(2);
-
-  return { total, wins, losses, wr, pnl, avgRR, profitFactor, expectancy };
-}
+const calculateStats = calculateTradeStats;
 
 export default function Analytics({ dbTrigger, userId }) {
   const [trades, setTrades] = useState([]);
@@ -78,7 +55,8 @@ export default function Analytics({ dbTrigger, userId }) {
   const filteredTrades = useMemo(() => {
     const now = new Date();
     return trades.filter(t => {
-      if (dateRange !== 'all' && t.tanggal) {
+      if (dateRange !== 'all') {
+        if (!t.tanggal) return false;
         const tradeDate = new Date(t.tanggal);
         if (dateRange === '7days') {
           const past7 = new Date(now);
@@ -97,7 +75,7 @@ export default function Analytics({ dbTrigger, userId }) {
       if (filterPair !== '' && t.pair?.toLowerCase() !== filterPair.toLowerCase()) return false;
       if (filterSession !== '' && t.sesi !== filterSession) return false;
       if (filterArah !== '' && t.arah !== filterArah) return false;
-      if (filterResult !== '' && t.hasilTrade !== filterResult) return false;
+      if (filterResult !== '' && (t.hasilTrade || '').toLowerCase().trim() !== filterResult.toLowerCase().trim()) return false;
 
       return true;
     });
@@ -106,36 +84,12 @@ export default function Analytics({ dbTrigger, userId }) {
   const stats = useMemo(() => calculateStats(filteredTrades), [filteredTrades]);
 
   const streakStats = useMemo(() => {
-    let maxWin = 0, maxLose = 0, currWin = 0, currLose = 0;
-    let equity = 0, peak = 0, maxDD = 0;
-
-    const sorted = [...filteredTrades].sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
-    sorted.forEach(t => {
-      const isWin = isWinTrade(t.hasilTrade);
-      const isLose = isLossTrade(t.hasilTrade);
-      const pnl = t.profitNominal || 0;
-
-      if (isWin) {
-        currWin++;
-        currLose = 0;
-        if (currWin > maxWin) maxWin = currWin;
-      } else if (isLose) {
-        currLose++;
-        currWin = 0;
-        if (currLose > maxLose) maxLose = currLose;
-      } else {
-        currWin = 0;
-        currLose = 0;
-      }
-
-      equity += pnl;
-      if (equity > peak) peak = equity;
-      const dd = peak - equity;
-      if (dd > maxDD) maxDD = dd;
-    });
-
-    return { maxWin, maxLose, maxDD: maxDD.toFixed(2) };
-  }, [filteredTrades]);
+    return {
+      maxWin: stats.maxWinStreak,
+      maxLose: stats.maxLoseStreak,
+      maxDD: stats.maxDD
+    };
+  }, [stats]);
 
   const recommendations = useMemo(() => {
     if (filteredTrades.length < 3) return null;
@@ -226,8 +180,15 @@ export default function Analytics({ dbTrigger, userId }) {
 
       {/* ── MULTI-FILTER BAR ── */}
       <div className="glass-card mb-30" style={{ padding: '16px 20px', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', fontSize: '12px', fontWeight: '700', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          <Filter size={14} /> Filter Multi-Kriteria
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: '700', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <Filter size={14} /> Filter Multi-Kriteria
+          </div>
+          {(dateRange !== 'all' || filterMethod !== '' || filterPair !== '' || filterSession !== '' || filterArah !== '' || filterResult !== '') && (
+            <span style={{ fontSize: '11px', color: '#60a5fa', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '12px', padding: '2px 8px' }}>
+              Filter aktif: Menampilkan {filteredTrades.length} dari {trades.length} trade
+            </span>
+          )}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>

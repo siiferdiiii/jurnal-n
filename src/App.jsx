@@ -101,7 +101,7 @@ function App() {
   const renderActivePage = () => {
     // TraderProfile is a sub-view inside the TopTraders tab
     if (currentTab === 'top-traders' && selectedTrader) {
-      return <TraderProfile trader={selectedTrader} session={session} onBack={() => setSelectedTrader(null)} />;
+      return <TraderProfile trader={selectedTrader} session={session} onBack={() => setSelectedTrader(null)} dbTrigger={dbTrigger} />;
     }
     switch (currentTab) {
       case 'dashboard': return <Dashboard dbTrigger={dbTrigger} userId={userId} />;
@@ -109,8 +109,8 @@ function App() {
       case 'analisis':  return <Analytics dbTrigger={dbTrigger} userId={userId} />;
       case 'metode':    return <Methods   dbTrigger={dbTrigger} onDataChange={triggerDataRefresh} userId={userId} />;
       case 'galeri':    return <Gallery   dbTrigger={dbTrigger} userId={userId} />;
-      case 'profil':    return <Profile   session={session} onDataChange={triggerDataRefresh} />;
-      case 'top-traders': return <TopTraders onSelectTrader={(t) => setSelectedTrader(t)} />;
+      case 'profil':    return <Profile   session={session} onDataChange={triggerDataRefresh} dbTrigger={dbTrigger} userId={userId} />;
+      case 'top-traders': return <TopTraders dbTrigger={dbTrigger} onSelectTrader={(t) => setSelectedTrader(t)} />;
       default:          return <Dashboard dbTrigger={dbTrigger} userId={userId} />;
     }
   };

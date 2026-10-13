@@ -16,7 +16,7 @@ import {
   ArrowDownRight,
   Sparkles
 } from 'lucide-react';
-import { getJurnal, isWinTrade, isLossTrade } from '../lib/api';
+import { getJurnal, calculateTradeStats, isWinTrade } from '../lib/api';
 import PnLCalendar from '../components/PnLCalendar';
 
 /* ─────────────────────────────────────────────
@@ -95,7 +95,15 @@ function EquityCurve({ trades }) {
 // Donut chart for result distribution
 function DonutChart({ trades }) {
   const counts = { win: 0, partial_tp: 0, 'sl+': 0, break_even: 0, lose: 0 };
-  trades.forEach(t => { if (counts[t.hasilTrade] !== undefined) counts[t.hasilTrade]++; });
+  trades.forEach(t => {
+    if (!t.hasilTrade) return;
+    const val = String(t.hasilTrade).toLowerCase().trim();
+    if (val === 'sl') {
+      counts.lose++;
+    } else if (counts[val] !== undefined) {
+      counts[val]++;
+    }
+  });
 
   const config = [
     { key: 'win',        label: 'WIN',        color: '#10b981' },
@@ -123,6 +131,9 @@ function DonutChart({ trades }) {
     return arc;
   });
 
+  const effectiveWins = counts.win + counts.partial_tp + counts['sl+'];
+  const effectiveWr = total > 0 ? ((effectiveWins / total) * 100).toFixed(1) : '0.0';
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
       <svg viewBox="0 0 140 140" style={{ width: '140px', height: '140px', flexShrink: 0 }}>
@@ -147,11 +158,17 @@ function DonutChart({ trades }) {
             <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: arc.color, flexShrink: 0 }} />
             <span style={{ color: 'var(--text-secondary)', flex: 1 }}>{arc.label}</span>
             <span style={{ color: '#fff', fontWeight: '600', fontFamily: 'var(--font-mono)' }}>{arc.count}</span>
-            <span style={{ color: 'var(--text-muted)', minWidth: '36px', textAlign: 'right' }}>
-              {total > 0 ? ((arc.count / total) * 100).toFixed(0) : 0}%
+            <span style={{ color: 'var(--text-muted)', minWidth: '40px', textAlign: 'right' }}>
+              {total > 0 ? ((arc.count / total) * 100).toFixed(1) : 0}%
             </span>
           </div>
         ))}
+        <div style={{ marginTop: '4px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+          <span style={{ color: 'var(--text-muted)' }}>Effective Win Rate:</span>
+          <span style={{ color: 'var(--color-win)', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>
+            {effectiveWr}%
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -228,7 +245,7 @@ function PairPerformance({ trades }) {
   });
 
   const pairs = Object.entries(pairMap)
-    .map(([pair, s]) => ({ pair, ...s, wr: ((s.wins / s.total) * 100).toFixed(0) }))
+    .map(([pair, s]) => ({ pair, ...s, wr: ((s.wins / s.total) * 100).toFixed(1) }))
     .sort((a, b) => b.pnl - a.pnl);
 
   if (pairs.length === 0) return (
@@ -290,7 +307,7 @@ function TradeTypeStats({ trades }) {
           <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
             <span>{s.total} trade</span>
             <span style={{ color: s.total > 0 && (s.wins/s.total) >= 0.5 ? 'var(--color-win)' : 'var(--color-lose)', fontWeight: '600' }}>
-              WR {s.total > 0 ? ((s.wins / s.total) * 100).toFixed(0) : 0}%
+              WR {s.total > 0 ? ((s.wins / s.total) * 100).toFixed(1) : 0}%
             </span>
             <span style={{ color: 'var(--accent-secondary)', fontFamily: 'var(--font-mono)' }}>
               {s.total > 0 ? (s.rr / s.total).toFixed(2) : '0.00'}R avg
@@ -304,32 +321,11 @@ function TradeTypeStats({ trades }) {
 
 // Advanced stats (streaks, profit factor, drawdown)
 function AdvancedStats({ trades }) {
-  const sorted = [...trades].sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
-
-  let maxWin = 0, maxLose = 0, curWin = 0, curLose = 0;
-  let grossWin = 0, grossLose = 0;
-  let equity = 0, peak = 0, maxDD = 0;
-
-  sorted.forEach(t => {
-    const isWin = isWinTrade(t.hasilTrade);
-    const pnl = t.profitNominal || 0;
-
-    // Streaks
-    if (isWin) { curWin++; curLose = 0; maxWin = Math.max(maxWin, curWin); }
-    else { curLose++; curWin = 0; maxLose = Math.max(maxLose, curLose); }
-
-    // Profit factor
-    if (pnl > 0) grossWin += pnl;
-    else if (pnl < 0) grossLose += Math.abs(pnl);
-
-    // Drawdown
-    equity += pnl;
-    if (equity > peak) peak = equity;
-    const dd = peak - equity;
-    if (dd > maxDD) maxDD = dd;
-  });
-
-  const profitFactor = grossLose > 0 ? (grossWin / grossLose).toFixed(2) : grossWin > 0 ? '∞' : '0';
+  const stats = calculateTradeStats(trades);
+  const maxWin = stats.maxWinStreak;
+  const maxLose = stats.maxLoseStreak;
+  const profitFactor = stats.profitFactor;
+  const maxDD = parseFloat(stats.maxDD) || 0;
 
   const chips = [
     { icon: <Flame size={18} style={{ color: '#f97316' }} />, label: 'Max Win Streak', value: `${maxWin}x`, color: 'var(--color-win)' },
@@ -598,13 +594,13 @@ export default function Dashboard({ dbTrigger, userId }) {
     });
   }, [dbTrigger, userId]);
 
-  // KPI
-  const totalTrades = trades.length;
-  const winTrades = trades.filter(t => isWinTrade(t.hasilTrade)).length;
-  const winRate = totalTrades > 0 ? ((winTrades / totalTrades) * 100).toFixed(1) : 0;
-  const totalNetPnL = trades.reduce((acc, cur) => acc + (cur.profitNominal || 0), 0).toFixed(2);
-  const cumulativeRR = trades.reduce((acc, cur) => acc + (cur.rrDiperoleh || 0), 0).toFixed(2);
-  const avgRR = totalTrades > 0 ? (parseFloat(cumulativeRR) / totalTrades).toFixed(2) : '0.00';
+  // KPI calculated via centralized helper
+  const stats = useMemo(() => calculateTradeStats(trades), [trades]);
+  const totalTrades = stats.total;
+  const winRate = stats.wr;
+  const totalNetPnL = stats.totalPnl.toFixed(2);
+  const cumulativeRR = stats.totalRR.toFixed(2);
+  const avgRR = stats.avgRR;
 
   const SectionHeader = ({ icon, title, subtitle }) => (
     <div style={{ marginBottom: '20px' }}>
@@ -682,11 +678,13 @@ export default function Dashboard({ dbTrigger, userId }) {
         </div>
       </div>
 
-      {/* ── ROW 3: Calendar + Psychology ── */}
-      <div className="dashboard-layout-split" style={{ marginTop: '20px' }}>
-        {/* Kalender PnL */}
+      {/* ── ROW 3: Daily Summary / Kalender PnL (Full Width) ── */}
+      <div style={{ marginTop: '24px' }}>
         <PnLCalendar trades={trades} />
+      </div>
 
+      {/* ── ROW 4: Analisis Psikologis & Performa Jenis Trade ── */}
+      <div className="dashboard-layout-split" style={{ marginTop: '24px' }}>
         {/* Analisis Psikologi — 3 Tahap & Faktor Kesalahan */}
         <div className="glass-card">
           <SectionHeader
@@ -696,10 +694,8 @@ export default function Dashboard({ dbTrigger, userId }) {
           />
           <PsychologyAnalyticsSection trades={trades} />
         </div>
-      </div>
 
-      {/* ── ROW 4: Trade Type + Advanced Stats ── */}
-      <div className="dashboard-layout-split" style={{ marginTop: '20px' }}>
+        {/* Performa per Jenis Trade */}
         <div className="glass-card">
           <SectionHeader
             icon={<Target size={18} style={{ color: '#06b6d4' }} />}
@@ -708,7 +704,10 @@ export default function Dashboard({ dbTrigger, userId }) {
           />
           <TradeTypeStats trades={trades} />
         </div>
+      </div>
 
+      {/* ── ROW 5: Statistik Lanjutan ── */}
+      <div style={{ marginTop: '24px' }}>
         <div className="glass-card">
           <SectionHeader
             icon={<Activity size={18} style={{ color: '#a78bfa' }} />}

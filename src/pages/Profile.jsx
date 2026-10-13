@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { signOut } from '../lib/auth';
-import { getJurnal, getMyProfile, upsertProfile, isWinTrade, isLossTrade } from '../lib/api';
+import { getJurnal, getMyProfile, upsertProfile, calculateTradeStats } from '../lib/api';
 
 function StatCard({ icon, label, value, sub, color = 'var(--accent)' }) {
   return (
@@ -68,9 +68,9 @@ function StatCard({ icon, label, value, sub, color = 'var(--accent)' }) {
   );
 }
 
-export default function Profile({ session, onDataChange }) {
+export default function Profile({ session, onDataChange, dbTrigger, userId: propUserId }) {
   const user = session?.user;
-  const userId = user?.id;
+  const userId = propUserId || user?.id;
 
   // Profile form state
   const [displayName, setDisplayName] = useState(user?.user_metadata?.display_name || '');
@@ -128,13 +128,7 @@ export default function Profile({ session, onDataChange }) {
     setIsLoadingStats(true);
     getJurnal(userId)
       .then((trades) => {
-        const total = trades.length;
-        const wins = trades.filter((t) => isWinTrade(t.hasilTrade)).length;
-        const losses = trades.filter((t) => isLossTrade(t.hasilTrade)).length;
-        const totalPnl = trades.reduce((s, t) => s + (t.profitNominal || 0), 0);
-        const totalRr = trades.reduce((s, t) => s + (t.rrDiperoleh || 0), 0);
-        const avgRr = total > 0 ? (totalRr / total).toFixed(2) : 0;
-        const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : 0;
+        const tStats = calculateTradeStats(trades);
 
         // Best trade
         const best = trades.reduce(
@@ -143,7 +137,7 @@ export default function Profile({ session, onDataChange }) {
         );
 
         // Pairs traded
-        const pairs = [...new Set(trades.map((t) => t.pair))].length;
+        const pairs = [...new Set(trades.map((t) => t.pair).filter(Boolean))].length;
 
         // Join date
         const joinDate = user?.created_at
@@ -154,14 +148,24 @@ export default function Profile({ session, onDataChange }) {
             })
           : '-';
 
-        setStats({ total, wins, losses, totalPnl, avgRr, winRate, best, pairs, joinDate });
+        setStats({
+          total: tStats.total,
+          wins: tStats.wins,
+          losses: tStats.losses,
+          totalPnl: tStats.totalPnl,
+          avgRr: tStats.avgRR,
+          winRate: tStats.wr,
+          best,
+          pairs,
+          joinDate
+        });
       })
       .catch((err) => {
         console.error('Error loading stats for profile:', err);
         setStats(null);
       })
       .finally(() => setIsLoadingStats(false));
-  }, [userId]);
+  }, [userId, dbTrigger]);
 
   const handleSaveName = async (e) => {
     e.preventDefault();
